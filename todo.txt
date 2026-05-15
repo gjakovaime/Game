@@ -1,0 +1,8 @@
+plan/todo:
+1. change the audio that is being used to read the tasks. Use Metas free models to generate the necessary words locally, later i can swap them with native speaker recordings
+2. Manual todo do, not for AI: generate new images for bej fjalin
+3. research new games and generate. 
+4. change ui so that the available games match the age of the profile
+5. the UI is blah - ask for help? New color scheme with a dark mode option
+6. how do we view it in mobile devices?
+7. explore the vooks style of: build your own story. more complex, but excellent for the 7+ age group

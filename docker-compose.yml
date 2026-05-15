@@ -1,0 +1,39 @@
+volumes:
+  hf-cache:
+
+services:
+  game:
+    build:
+      context: .
+    ports:
+      - "8081:8081"
+    volumes:
+      # Mount source dirs so edits on the host appear instantly in the container.
+      # After editing, run: docker compose exec game npm run build:web
+      # then refresh the browser.
+      - ./src:/app/src
+      - ./app:/app/app
+      - ./assets:/app/assets
+      - ./app.json:/app/app.json
+      - ./babel.config.js:/app/babel.config.js
+      - ./tsconfig.json:/app/tsconfig.json
+    environment:
+      - EXPO_OFFLINE=1
+
+  generate-audio:
+    build:
+      context: .
+      dockerfile: Dockerfile.audio
+    volumes:
+      - ./assets/audio:/app/assets/audio
+      - ./scripts:/app/scripts
+      - hf-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - audio
