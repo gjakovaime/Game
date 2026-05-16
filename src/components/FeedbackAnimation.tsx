@@ -1,23 +1,18 @@
 import LottieView from 'lottie-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useProfile } from '../hooks/useProfile';
 
 // Auto-discover animations by naming pattern.
-// Drop any *-success.json or *-fail.json in assets/animation/ — no code changes needed.
-const successCtx = (require as any).context('../../assets/animation', false, /-success\.json$/);
-const failCtx    = (require as any).context('../../assets/animation', false, /-fail\.json$/);
+// Drop any *-success.lottie or *-fail.lottie in assets/animation/ — no code changes needed.
+const successCtx = (require as any).context('../../assets/animation', false, /-success\.lottie$/);
+const failCtx    = (require as any).context('../../assets/animation', false, /-fail\.lottie$/);
 
 const SUCCESS: any[] = successCtx.keys().map((k: string) => successCtx(k));
 const FAIL: any[]    = failCtx.keys().map((k: string) => failCtx(k));
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
-}
-
-// Read exact play duration from Lottie JSON metadata
-function animMs(anim: any): number {
-  return Math.round((anim.op / anim.fr) * 1000) + 200; // +200ms settle buffer
 }
 
 type Props = {
@@ -39,6 +34,12 @@ export function FeedbackAnimation({ type, visible, onComplete }: Props) {
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
+  // Called by onAnimationFinish (enabled path) or by the fallback timer (disabled / load failure)
+  const fireComplete = useCallback(() => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    onCompleteRef.current?.();
+  }, []);
+
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (!visible) return;
@@ -47,27 +48,42 @@ export function FeedbackAnimation({ type, visible, onComplete }: Props) {
     setSource(anim);
     setAnimKey(k => k + 1);
 
-    // When animations disabled: call onComplete after a fixed delay so games still advance
-    const ms = enabled && anim ? animMs(anim) : type === 'success' ? 1800 : 1400;
-    timerRef.current = setTimeout(() => onCompleteRef.current?.(), ms);
+    if (!enabled || !anim) {
+      // Animations disabled — advance after a fixed delay
+      const ms = type === 'success' ? 1800 : 1400;
+      timerRef.current = setTimeout(() => onCompleteRef.current?.(), ms);
+    } else {
+      // Enabled — onAnimationFinish fires first; this is just a safety fallback
+      timerRef.current = setTimeout(() => onCompleteRef.current?.(), 15000);
+    }
 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [visible]);
 
-  if (!visible || !enabled || !source) return null;
+  // Dim renders on the very first frame visible=true (blocks touches + covers content immediately).
+  // LottieView appears one frame later once source is picked by the effect above.
+  if (!visible) return null;
 
   return (
     // pointerEvents="auto" blocks all touches — background is fully disabled during animation
     <View style={styles.overlay} pointerEvents="auto">
-      <View style={type === 'success' ? styles.dimDark : styles.dimMedium}>
-      <LottieView
-        key={animKey}
-        source={source}
-        autoPlay
-        loop={false}
-        style={styles.lottie}
-        resizeMode="contain"
-      /></View> 
+      {/* Dim layer — rendered first so it sits below in DOM/z order */}
+      <View style={type === 'success' ? styles.dimDark : styles.dimMedium} />
+      {/* Animation layer — sibling rendered after dim, so it sits on top */}
+      {enabled && source && (
+        <View style={styles.lottieLayer}>
+          <LottieView
+            key={animKey}
+            source={source}
+            autoPlay
+            loop={false}
+            style={styles.lottie}
+            webStyle={{ width: '100%', height: '100%' }}
+            resizeMode="contain"
+            onAnimationFinish={fireComplete}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -75,9 +91,7 @@ export function FeedbackAnimation({ type, visible, onComplete }: Props) {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1
+    zIndex: 100,
   },
   dimDark: {
     ...StyleSheet.absoluteFillObject,
@@ -87,8 +101,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  lottie: {
+  lottieLayer: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 99,
+    zIndex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lottie: {
+    width: '80%',
+    height: '80%',
   },
 });

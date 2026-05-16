@@ -21,7 +21,8 @@ const AGES = Array.from({ length: 10 }, (_, i) => i + 3); // 3–12
 
 export default function Onboarding() {
   const router = useRouter();
-  const { createProfile } = useProfile();
+  const { createProfile, activeProfile } = useProfile();
+  const canGoBack = !!activeProfile;
 
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
@@ -52,6 +53,17 @@ export default function Onboarding() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        {/* Top bar — back button shown when adding to existing profiles */}
+        <View style={styles.topBar}>
+          {canGoBack ? (
+            <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
+              <Text style={styles.backText}>← Kthehu</Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
+        </View>
+
         {/* Progress dots */}
         <View style={styles.dots}>
           {STEPS.map((s, i) => (
@@ -135,11 +147,20 @@ export default function Onboarding() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    minHeight: 44,
+  },
+  backBtn: { padding: Spacing.sm },
+  backText: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '600' },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: Spacing.sm,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.sm,
   },
   dot: {
     width: 10,

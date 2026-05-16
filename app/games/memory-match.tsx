@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
@@ -13,8 +13,7 @@ import { useSpeech } from '../../src/hooks/useSpeech';
 
 const PAIR_COUNT = 6;
 const COLS = 3;
-const { width: SCREEN_W } = Dimensions.get('window');
-const CARD_SIZE = Math.floor((SCREEN_W - Spacing.lg * 2 - Spacing.sm * (COLS - 1)) / COLS);
+const ROWS = (PAIR_COUNT * 2) / COLS; // 4
 
 type CardData = { id: string; pairId: string; type: 'word' | 'emoji'; item: VocabItem };
 type CardState = 'hidden' | 'flipped' | 'matched';
@@ -31,7 +30,7 @@ function buildCards(): CardData[] {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function MemoryCard({ card, state, onPress }: { card: CardData; state: CardState; onPress: () => void }) {
+function MemoryCard({ card, state, onPress, cardSize }: { card: CardData; state: CardState; onPress: () => void; cardSize: number }) {
   const scale = useSharedValue(1);
   const prevRevealed = useRef(false);
   const isRevealed = state !== 'hidden';
@@ -53,20 +52,20 @@ function MemoryCard({ card, state, onPress }: { card: CardData; state: CardState
     <AnimatedPressable
       onPress={onPress}
       disabled={state !== 'hidden'}
-      style={[styles.card, animStyle, { width: CARD_SIZE, height: CARD_SIZE, backgroundColor: bg, borderColor: border }]}
+      style={[styles.card, animStyle, { width: cardSize, height: cardSize, backgroundColor: bg, borderColor: border }]}
       accessibilityRole="button"
       accessibilityLabel={isRevealed ? (card.type === 'emoji' ? card.item.english : card.item.albanian) : 'hidden card'}
     >
       {isRevealed ? (
         card.type === 'emoji' ? (
           VOCAB_IMAGES[card.item.id]
-            ? <Image source={VOCAB_IMAGES[card.item.id]} style={styles.cardImage} resizeMode="contain" />
-            : <Text style={styles.cardEmoji}>{card.item.emoji}</Text>
+            ? <Image source={VOCAB_IMAGES[card.item.id]} style={{ width: cardSize * 0.65, height: cardSize * 0.65 }} resizeMode="contain" />
+            : <Text style={{ fontSize: cardSize * 0.42 }}>{card.item.emoji}</Text>
         ) : (
-          <Text style={styles.cardWord} adjustsFontSizeToFit numberOfLines={2}>{card.item.albanian}</Text>
+          <Text style={[styles.cardWord, { fontSize: Math.max(cardSize * 0.17, 10) }]} adjustsFontSizeToFit numberOfLines={2}>{card.item.albanian}</Text>
         )
       ) : (
-        <Text style={styles.cardBack}>🎴</Text>
+        <Text style={{ fontSize: cardSize * 0.38 }}>🎴</Text>
       )}
     </AnimatedPressable>
   );
@@ -102,8 +101,16 @@ export default function MemoryMatch() {
   const [done, setDone] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
+  const [gridSize, setGridSize] = useState({ w: 0, h: 0 });
   const locked = useRef(false);
   const advanceGame = useRef<(() => void) | null>(null);
+
+  const cardSize = gridSize.w > 0
+    ? Math.floor(Math.min(
+        (gridSize.w - Spacing.sm * (COLS - 1)) / COLS,
+        (gridSize.h - Spacing.sm * (ROWS - 1)) / ROWS,
+      ))
+    : 80;
 
   useEffect(() => () => stop(), []);
 
@@ -181,16 +188,23 @@ export default function MemoryMatch() {
       <Text style={styles.instruction}>Gjej çiftet! 🔍</Text>
       <Text style={styles.instructionEn}>(Match the word to its picture!)</Text>
 
-      <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+      <View
+        style={styles.grid}
+        onLayout={e => {
+          const { width, height } = e.nativeEvent.layout;
+          setGridSize({ w: width, h: height });
+        }}
+      >
         {cards.map(card => (
           <MemoryCard
             key={card.id}
             card={card}
             state={cardStates[card.id] ?? 'hidden'}
             onPress={() => handleCard(card)}
+            cardSize={cardSize}
           />
         ))}
-      </ScrollView>
+      </View>
 
       <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
@@ -210,22 +224,21 @@ const styles = StyleSheet.create({
   instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text, marginTop: Spacing.md },
   instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: Colors.textLight, marginBottom: Spacing.md },
   grid: {
+    flex: 1,
     flexDirection: 'row', flexWrap: 'wrap',
-    justifyContent: 'center', gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xxl,
+    justifyContent: 'center', alignContent: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xs,
   },
   card: {
     borderRadius: Radii.lg, borderWidth: 3,
     justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
   },
-  cardEmoji: { fontSize: CARD_SIZE * 0.45 },
-  cardImage: { width: CARD_SIZE * 0.7, height: CARD_SIZE * 0.7 },
   cardWord: {
-    fontSize: CARD_SIZE * 0.18, fontWeight: '800', color: Colors.text,
+    fontWeight: '800', color: Colors.text,
     textAlign: 'center', paddingHorizontal: 4,
   },
-  cardBack: { fontSize: CARD_SIZE * 0.4 },
   // Summary
   summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
   summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
