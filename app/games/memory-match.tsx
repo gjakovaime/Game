@@ -103,6 +103,7 @@ export default function MemoryMatch() {
   const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
   const locked = useRef(false);
+  const advanceGame = useRef<(() => void) | null>(null);
 
   useEffect(() => () => stop(), []);
 
@@ -131,11 +132,11 @@ export default function MemoryMatch() {
         setMatches(newMatches);
         setCardStates(prev => ({ ...prev, [a]: 'matched', [b]: 'matched' }));
         setFlipped([]);
-        setTimeout(() => {
+        advanceGame.current = () => {
           setShowBurst(false);
           if (newMatches >= PAIR_COUNT) setDone(true);
           locked.current = false;
-        }, 1200);
+        };
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         setShowFail(true);
@@ -191,7 +192,7 @@ export default function MemoryMatch() {
         ))}
       </ScrollView>
 
-      <FeedbackAnimation type="success" visible={showBurst} />
+      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );

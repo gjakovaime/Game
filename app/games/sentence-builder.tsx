@@ -191,7 +191,7 @@ export default function SentenceBuilder() {
   const [done, setDone] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceGame = useRef<(() => void) | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sentence = sentences[roundIdx];
@@ -207,7 +207,6 @@ export default function SentenceBuilder() {
   useEffect(() => {
     if (sentence) initRound(sentence);
     return () => {
-      if (advanceTimer.current) clearTimeout(advanceTimer.current);
       if (toastTimer.current) clearTimeout(toastTimer.current);
       if (failTimer.current) clearTimeout(failTimer.current);
     };
@@ -242,11 +241,11 @@ export default function SentenceBuilder() {
       if (isFirstAttempt) setFirstAttemptCount((c) => c + 1);
       speak(sentence.albanian, 0.8);
       showToast('Saktë! ⭐');
-      advanceTimer.current = setTimeout(() => {
+      advanceGame.current = () => {
         setShowBurst(false);
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx((r) => r + 1);
-      }, 2200);
+      };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setFlashColor(Colors.error);
@@ -354,7 +353,7 @@ export default function SentenceBuilder() {
         </View>
       )}
 
-      <FeedbackAnimation type="success" visible={showBurst} />
+      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );

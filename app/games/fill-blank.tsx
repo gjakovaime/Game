@@ -97,14 +97,14 @@ export default function FillBlank() {
   const [done, setDone] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceGame = useRef<(() => void) | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const round = game[roundIdx];
 
   useEffect(() => {
     setChoiceStates({});
-    return () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); if (failTimer.current) clearTimeout(failTimer.current); };
+    return () => { if (failTimer.current) clearTimeout(failTimer.current); };
   }, [roundIdx, game]);
 
   useEffect(() => () => stop(), []);
@@ -122,11 +122,11 @@ export default function FillBlank() {
       setShowBurst(true);
       setScore(s => s + 1);
       speak(round.sentence.albanian, 0.85);
-      advanceTimer.current = setTimeout(() => {
+      advanceGame.current = () => {
         setShowBurst(false);
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx(r => r + 1);
-      }, 2000);
+      };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setShowFail(true);
@@ -201,7 +201,7 @@ export default function FillBlank() {
         ))}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} />
+      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );

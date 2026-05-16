@@ -138,14 +138,14 @@ export default function PictureMatch() {
   const [showFail, setShowFail] = useState(false);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceGame = useRef<(() => void) | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const round = game[roundIdx];
 
   useEffect(() => {
     if (round) speak(round.correct.albanian);
-    return () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); if (failTimer.current) clearTimeout(failTimer.current); };
+    return () => { if (failTimer.current) clearTimeout(failTimer.current); };
   }, [roundIdx, game]);
 
   useEffect(() => { return () => { stop(); }; }, [stop]);
@@ -164,12 +164,12 @@ export default function PictureMatch() {
       praise(activeProfile?.name);
       setShowBurst(true);
       setScore((s) => s + 1);
-      advanceTimer.current = setTimeout(() => {
+      advanceGame.current = () => {
         setShowBurst(false);
         resetTiles();
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx((r) => r + 1);
-      }, 1800);
+      };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setShowFail(true);
@@ -240,7 +240,7 @@ export default function PictureMatch() {
         ))}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} />
+      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );

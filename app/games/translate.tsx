@@ -106,7 +106,7 @@ export default function Translate() {
   const [done, setDone] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceGame = useRef<(() => void) | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const round = game[roundIdx];
@@ -114,7 +114,7 @@ export default function Translate() {
   useEffect(() => {
     setChoiceStates({});
     if (round) speak(round.direction === 'eng-to-alb' ? round.item.albanian : round.item.english);
-    return () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); if (failTimer.current) clearTimeout(failTimer.current); };
+    return () => { if (failTimer.current) clearTimeout(failTimer.current); };
   }, [roundIdx, game]);
 
   useEffect(() => () => stop(), []);
@@ -130,11 +130,11 @@ export default function Translate() {
       setShowBurst(true);
       setScore(s => s + 1);
       speak(round.item.albanian);
-      advanceTimer.current = setTimeout(() => {
+      advanceGame.current = () => {
         setShowBurst(false);
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx(r => r + 1);
-      }, 1800);
+      };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setShowFail(true);
@@ -202,7 +202,7 @@ export default function Translate() {
         ))}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} />
+      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );

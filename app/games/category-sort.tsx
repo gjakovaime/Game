@@ -56,6 +56,8 @@ export default function CategorySort() {
   const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
   const locked = useRef(false);
+  const advanceGame = useRef<(() => void) | null>(null);
+  const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const item = queue[idx];
 
@@ -75,18 +77,24 @@ export default function CategorySort() {
       praise(activeProfile?.name);
       setShowBurst(true);
       setScore(s => s + 1);
+      advanceGame.current = () => {
+        setFlash(null);
+        setShowBurst(false);
+        if (idx + 1 >= TOTAL) setDone(true);
+        else setIdx(i => i + 1);
+        locked.current = false;
+      };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setShowFail(true);
+      failTimer.current = setTimeout(() => {
+        setFlash(null);
+        setShowFail(false);
+        if (idx + 1 >= TOTAL) setDone(true);
+        else setIdx(i => i + 1);
+        locked.current = false;
+      }, 900);
     }
-    setTimeout(() => {
-      setFlash(null);
-      setShowBurst(false);
-      setShowFail(false);
-      if (idx + 1 >= TOTAL) setDone(true);
-      else setIdx(i => i + 1);
-      locked.current = false;
-    }, ok ? 1200 : 900);
   }, [item, idx, activeProfile]);
 
   function handleReplay() {
@@ -147,7 +155,7 @@ export default function CategorySort() {
         })}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} />
+      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );

@@ -17,7 +17,7 @@ import { useProfile } from '../src/hooks/useProfile';
 
 export default function Home() {
   const router = useRouter();
-  const { activeProfile, profiles, switchProfile, loaded } = useProfile();
+  const { activeProfile, profiles, switchProfile, saveProfile, loaded } = useProfile();
   const [showProfiles, setShowProfiles] = useState(false);
 
   useEffect(() => {
@@ -171,6 +171,16 @@ export default function Home() {
                 {p.id === activeProfile.id && <Text style={styles.check}>✓</Text>}
               </Pressable>
             ))}
+            {/* Animations toggle for active profile */}
+            <Pressable
+              style={styles.animToggleRow}
+              onPress={() => saveProfile({ ...activeProfile, animationsEnabled: !activeProfile.animationsEnabled })}
+            >
+              <Text style={styles.animToggleLabel}>Animacionet</Text>
+              <View style={[styles.toggleTrack, activeProfile.animationsEnabled && styles.toggleTrackOn]}>
+                <View style={[styles.toggleThumb, activeProfile.animationsEnabled && styles.toggleThumbOn]} />
+              </View>
+            </Pressable>
             <Pressable style={styles.closeBtn} onPress={() => setShowProfiles(false)}>
               <Text style={styles.closeBtnText}>Mbyll</Text>
             </Pressable>
@@ -222,6 +232,25 @@ const styles = StyleSheet.create({
   profileEmoji: { fontSize: 32, marginRight: Spacing.md },
   profileName: { flex: 1, fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text },
   check: { fontSize: FontSizes.lg, color: Colors.primary, fontWeight: '900' },
+  animToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  animToggleLabel: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.text },
+  toggleTrack: {
+    width: 48, height: 26, borderRadius: Radii.full,
+    backgroundColor: Colors.border, justifyContent: 'center', padding: 3,
+  },
+  toggleTrackOn: { backgroundColor: Colors.success },
+  toggleThumb: {
+    width: 20, height: 20, borderRadius: Radii.full,
+    backgroundColor: Colors.surface,
+  },
+  toggleThumbOn: { alignSelf: 'flex-end' },
   closeBtn: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.full,

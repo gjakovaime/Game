@@ -12,6 +12,7 @@ export type Profile = {
   age: number;
   avatarEmoji: string;
   ageGroup: AgeGroup;
+  animationsEnabled: boolean;
 };
 
 export function useProfile() {
@@ -65,6 +66,7 @@ export function useProfile() {
         age,
         avatarEmoji,
         ageGroup: age <= 6 ? 'young' : 'older',
+        animationsEnabled: true,
       };
       const updated = [...profiles, profile];
       setProfiles(updated);
