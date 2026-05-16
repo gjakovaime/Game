@@ -59,7 +59,7 @@ export function FeedbackAnimation({ type, visible, onComplete }: Props) {
   return (
     // pointerEvents="auto" blocks all touches — background is fully disabled during animation
     <View style={styles.overlay} pointerEvents="auto">
-      <View style={type === 'success' ? styles.dimDark : styles.dimMedium} />
+      <View style={type === 'success' ? styles.dimDark : styles.dimMedium}>
       <LottieView
         key={animKey}
         source={source}
@@ -67,7 +67,7 @@ export function FeedbackAnimation({ type, visible, onComplete }: Props) {
         loop={false}
         style={styles.lottie}
         resizeMode="contain"
-      />
+      /></View> 
     </View>
   );
 }
