@@ -36,6 +36,13 @@ function wordCandidates(key: string): string[] {
   ];
 }
 
+function englishCandidates(key: string): string[] {
+  return [
+    `/audio/english/${key}.mp3`,
+    `/audio/english/${key}.wav`,
+  ];
+}
+
 // ─── Web audio via HTML Audio API ────────────────────────────────────────────
 // expo-av's createAsync doesn't reliably throw on a 404, so playAsync() then
 // fails silently. The HTML Audio API handles missing files correctly via onerror.
@@ -120,6 +127,16 @@ export function useSpeech() {
 
   const speakSlow = useCallback((text: string) => speak(text, 0.65), [speak]);
 
+  const speakEnglish = useCallback((text: string, rate = 1, onEnd?: () => void) => {
+    stop();
+    const doSpeak = () => {
+      if (!isMounted.current) return;
+      speakWeb(englishCandidates(normalizeAudioKey(text)), rate, onEnd);
+    };
+    if (_unlocked) doSpeak();
+    else _pendingSpeak = doSpeak;
+  }, [stop]);
+
   const praise = useCallback(() => {
     const asset = pickRandom(SUCCESS_SOUNDS);
     if (asset !== null) playAsset(asset);
@@ -130,5 +147,5 @@ export function useSpeech() {
     if (asset !== null) playAsset(asset);
   }, []);
 
-  return { speak, speakSlow, stop, praise, mistake };
+  return { speak, speakSlow, speakEnglish, stop, praise, mistake };
 }

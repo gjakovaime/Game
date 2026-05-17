@@ -98,7 +98,7 @@ function Summary({ score, total, onReplay, onHome, name }: {
 export default function Translate() {
   const router = useRouter();
   const { activeProfile } = useProfile();
-  const { speak, praise, stop, mistake } = useSpeech();
+  const { speak, speakEnglish, praise, stop, mistake } = useSpeech();
 
   const [game, setGame] = useState<TranslateRound[]>(() => buildGame());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -114,7 +114,6 @@ export default function Translate() {
 
   useEffect(() => {
     setChoiceStates({});
-    if (round) speak(round.item.albanian);
     return () => { if (failTimer.current) clearTimeout(failTimer.current); };
   }, [roundIdx, game]);
 
@@ -126,16 +125,22 @@ export default function Translate() {
     setChoiceStates(prev => ({ ...prev, [choice]: isCorrect ? 'correct' : 'wrong' }));
 
     if (isCorrect) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      praise();
-      setShowBurst(true);
       setScore(s => s + 1);
-      speak(round.item.albanian, 0.85);
       advanceGame.current = () => {
         setShowBurst(false);
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx(r => r + 1);
       };
+      const afterSpeak = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        praise();
+        setShowBurst(true);
+      };
+      if (round.direction === 'alb-to-eng') {
+        speakEnglish(round.correct, 0.9, afterSpeak);
+      } else {
+        speak(round.correct, 0.85, afterSpeak);
+      }
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
@@ -185,7 +190,7 @@ export default function Translate() {
         <Text style={styles.directionBadge}>{directionLabel}</Text>
         <Text style={styles.emoji}>{round.item.emoji}</Text>
         <Text style={styles.sourceWord}>{sourceWord}</Text>
-        <Pressable onPress={() => speak(round.item.albanian)} style={styles.speakerBtn}>
+        <Pressable onPress={() => isAlbToEng ? speak(round.item.albanian) : speakEnglish(round.item.english)} style={styles.speakerBtn}>
           <Text style={styles.speakerIcon}>🔊</Text>
         </Pressable>
       </View>
