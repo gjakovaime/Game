@@ -5,7 +5,7 @@ WORKDIR /app
 # Install dependencies (runs on Linux FS — no Windows NTFS issues)
 COPY package.json package-lock.json* ./
 RUN npm install
-
+ 
 # Copy source and build the web export
 COPY . .
 

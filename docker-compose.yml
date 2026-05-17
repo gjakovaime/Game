@@ -16,8 +16,31 @@ services:
       - ./assets:/app/assets
       - ./app.json:/app/app.json
       - ./babel.config.js:/app/babel.config.js
+      
     environment:
       - EXPO_OFFLINE=1
+
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8083:8081"
+      - "19000:19000"
+      - "19001:19001"
+    volumes:
+      - ./src:/app/src
+      - ./app:/app/app
+      - ./assets:/app/assets
+      - ./app.json:/app/app.json
+      - ./babel.config.js:/app/babel.config.js
+      - ./package.json:/app/package.json
+    environment:
+      - EXPO_TOKEN=${EXPO_TOKEN}
+      - EXPO_OFFLINE=0
+    command: npx expo start --tunnel --clear
+    profiles:
+      - dev
 
   generate-audio:
     build:

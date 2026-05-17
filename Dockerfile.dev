@@ -1,0 +1,8 @@
+FROM node:20-alpine
+ WORKDIR /app
+ COPY package.json ./
+ RUN npm install --legacy-peer-deps
+  RUN npm install -g @expo/ngrok@^4.1.0
+ COPY . .
+ EXPOSE 8081 19000 19001
+ CMD ["npx", "expo", "start", "--tunnel", "--clear"]

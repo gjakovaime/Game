@@ -6,8 +6,12 @@ plan/todo:
 5. the UI is blah - ask for help? New color scheme with a dark mode option
 6. how do we view it in mobile devices?
 7. explore the vooks style of: build your own story. more complex, but excellent for the 7+ age group
+8. Setting/navigation prompt should have an option to select english or shqip
+9.
 
- long term plan would be to add a game/feature where a kid can pronounce a word into the microphone
+
+X. prompt to download if you want to enable this feature:
+  long term plan would be to add a game/feature where a kid can pronounce a word into the microphone
   and get feedback whether it was understood, granted this is for albanian, so the viability of using
    a model is critical. Perhaps i can live with pre-generating the english files for now.
 
