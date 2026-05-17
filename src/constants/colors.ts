@@ -1,37 +1,32 @@
-// Color values are defined in src/styles/theme.css as CSS custom properties.
-// Edit theme.css to retheme the app — changes propagate here automatically.
-// NOTE: CSS var() references are resolved by React Native Web. If ever building
-//       for iOS/Android, replace these with literal hex values.
-
 export const Colors = {
-  primary:        'var(--color-primary)',
-  primaryDark:    'var(--color-primary-dark)',
-  secondary:      'var(--color-secondary)',
-  secondaryDark:  'var(--color-secondary-dark)',
-  accent:         'var(--color-accent)',
+  primary:        '#E8445A',
+  primaryDark:    '#C73650',
+  secondary:      '#4ECDC4',
+  secondaryDark:  '#3BAFA7',
+  accent:         '#FFD93D',
 
-  background:  'var(--color-background)',
-  surface:     'var(--color-surface)',
-  border:      'var(--color-border)',
+  background:  '#0D1B3E',
+  surface:     '#162550',
+  border:      '#243870',
 
-  text:           'var(--color-text)',
-  textLight:      'var(--color-text-light)',
-  textOnPrimary:  'var(--color-text-on-primary)',
+  text:           '#F0F4FF',
+  textLight:      '#8AAAD4',
+  textOnPrimary:  '#FFFFFF',
 
-  success:       'var(--color-success)',
-  successLight:  'var(--color-success-light)',
-  error:         'var(--color-error)',
-  errorLight:    'var(--color-error-light)',
-  warning:       'var(--color-warning)',
+  success:       '#6BCB77',
+  successLight:  '#0E3B1A',
+  error:         '#FF6B6B',
+  errorLight:    '#3B0E0E',
+  warning:       '#FFD93D',
 
-  young:       'var(--color-young)',
-  youngLight:  'var(--color-young-light)',
-  older:       'var(--color-older)',
-  olderLight:  'var(--color-older-light)',
+  young:       '#FF9F43',
+  youngLight:  '#7B7FD4',
+  older:       '#7B7FD4',
+  olderLight:  '#1A1B3A',
 
-  star:       'var(--color-star)',
-  starEmpty:  'var(--color-star-empty)',
-  avatarBg:   'var(--color-avatar-bg)',
+  star:       '#FFD93D',
+  starEmpty:  '#2D3866',
+  avatarBg:   '#1E2B5C',
 };
 
 export const FontSizes = {

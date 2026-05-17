@@ -10,6 +10,7 @@ RUN npm install
 COPY . .
 
 ENV EXPO_OFFLINE=1
+RUN npm run sync-audio
 RUN npx expo export --platform web --output-dir dist
 
 EXPOSE 8081

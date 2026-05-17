@@ -1,16 +1,18 @@
 import { Audio } from 'expo-av';
 import { useCallback, useEffect, useRef } from 'react';
+import { AUDIO_FILES } from '../data/audioFiles';
 
 // ─── Praise / mistake audio ───────────────────────────────────────────────────
-// require.context is a web-only Metro/webpack feature — not available on native.
-let SUCCESS_SOUNDS: number[] = [];
-let FAIL_SOUNDS: number[]    = [];
-try {
-  const successCtx = (require as any).context('../../assets/audio/praises', false, /-success\.(wav|mp3)$/);
-  const failCtx    = (require as any).context('../../assets/audio/praises', false, /-fail\.(wav|mp3)$/);
-  SUCCESS_SOUNDS = successCtx.keys().map((k: string) => successCtx(k));
-  FAIL_SOUNDS    = failCtx.keys().map((k: string) => failCtx(k));
-} catch {}
+const SUCCESS_SOUNDS = [
+  require('../../assets/audio/praises/eraShumMire-success.wav'),
+  require('../../assets/audio/praises/eraUrra-success.wav'),
+  require('../../assets/audio/praises/erabravo-success.wav'),
+];
+
+const FAIL_SOUNDS = [
+  require('../../assets/audio/praises/eragabim-fail.wav'),
+  require('../../assets/audio/praises/erajo-fail.wav'),
+];
 
 function pickRandom<T>(arr: T[]): T | null {
   return arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
@@ -53,7 +55,6 @@ function stopWebAudio() {
 }
 
 function speakWeb(candidates: string[], rate: number, onEnd?: () => void): void {
-  if (!isWeb) { onEnd?.(); return; }
   stopWebAudio();
   let idx = 0;
 
@@ -85,8 +86,44 @@ if (isWeb && typeof window.addEventListener === 'function') {
   window.addEventListener('pointerdown', unlock, { once: true });
   window.addEventListener('keydown',     unlock, { once: true });
 } else {
-  // On native there's no gesture gate — audio can play immediately.
   _unlocked = true;
+}
+
+// ─── Native audio via expo-av ────────────────────────────────────────────────
+let _nativeSound: Audio.Sound | null = null;
+
+async function stopNativeAudio() {
+  if (_nativeSound) {
+    try { await _nativeSound.stopAsync(); await _nativeSound.unloadAsync(); } catch {}
+    _nativeSound = null;
+  }
+}
+
+async function playNative(asset: any, rate: number, onEnd?: () => void) {
+  await stopNativeAudio();
+  try {
+    const { sound } = await Audio.Sound.createAsync(asset, { rate, shouldCorrectPitch: true });
+    _nativeSound = sound;
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if ('didJustFinish' in status && status.didJustFinish) {
+        sound.unloadAsync().catch(() => {});
+        if (_nativeSound === sound) _nativeSound = null;
+        onEnd?.();
+      }
+    });
+    await sound.playAsync();
+  } catch {
+    onEnd?.();
+  }
+}
+
+function speakNative(key: string, rate: number, onEnd?: () => void) {
+  const asset = AUDIO_FILES[key];
+  if (asset !== undefined) {
+    playNative(asset, rate, onEnd);
+  } else {
+    onEnd?.();
+  }
 }
 
 // ─── expo-av asset playback (for praises / mistakes) ────────────────────────
@@ -110,29 +147,43 @@ export function useSpeech() {
   }, []);
 
   const stop = useCallback(() => {
-    stopWebAudio();
+    if (isWeb) stopWebAudio();
+    else stopNativeAudio();
   }, []);
 
   const speak = useCallback((text: string, rate = 1, onEnd?: () => void) => {
     stop();
-    const doSpeak = () => {
+    const key = normalizeAudioKey(text);
+
+    if (isWeb) {
+      const doSpeak = () => {
+        if (!isMounted.current) return;
+        speakWeb(wordCandidates(key), rate, onEnd);
+      };
+      if (_unlocked) doSpeak();
+      else _pendingSpeak = doSpeak;
+    } else {
       if (!isMounted.current) return;
-      speakWeb(wordCandidates(normalizeAudioKey(text)), rate, onEnd);
-    };
-    if (_unlocked) doSpeak();
-    else _pendingSpeak = doSpeak;
+      speakNative(key, rate, onEnd);
+    }
   }, [stop]);
 
   const speakSlow = useCallback((text: string) => speak(text, 0.65), [speak]);
 
   const speakEnglish = useCallback((text: string, rate = 1, onEnd?: () => void) => {
     stop();
-    const doSpeak = () => {
-      if (!isMounted.current) return;
-      speakWeb(englishCandidates(normalizeAudioKey(text)), rate, onEnd);
-    };
-    if (_unlocked) doSpeak();
-    else _pendingSpeak = doSpeak;
+    if (!isMounted.current) return;
+    if (isWeb) {
+      const key = normalizeAudioKey(text);
+      const doSpeak = () => {
+        if (!isMounted.current) return;
+        speakWeb(englishCandidates(key), rate, onEnd);
+      };
+      if (_unlocked) doSpeak();
+      else _pendingSpeak = doSpeak;
+    } else {
+      onEnd?.();
+    }
   }, [stop]);
 
   const praise = useCallback(() => {

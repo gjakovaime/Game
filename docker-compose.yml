@@ -38,10 +38,18 @@ services:
     environment:
       - EXPO_TOKEN=${EXPO_TOKEN}
       - EXPO_OFFLINE=0
-    command: npx expo start --tunnel --clear
+    command: sh -c "node scripts/sync-audio.js && npx expo start --tunnel --clear"
     profiles:
       - dev
-
+    develop:
+      watch:
+        - action: sync
+          path: ./web
+          target: /src/web
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
   generate-audio:
     build:
       context: .
