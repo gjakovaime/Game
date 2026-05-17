@@ -25,7 +25,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "8083:8081"
+      - "8081:8081"
       - "19000:19000"
       - "19001:19001"
     volumes:
@@ -38,7 +38,8 @@ services:
     environment:
       - EXPO_TOKEN=${EXPO_TOKEN}
       - EXPO_OFFLINE=0
-    command: sh -c "node scripts/sync-audio.js && npx expo start --tunnel --clear"
+      - REACT_NATIVE_PACKAGER_HOSTNAME=${HOST_IP}
+    command: sh -c "node scripts/sync-audio.js && npx expo start --lan --clear"
     profiles:
       - dev
     develop:
