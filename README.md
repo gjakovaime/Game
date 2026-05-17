@@ -129,7 +129,7 @@ docker compose --profile audio run --rm generate-audio
 This:
 1. Downloads `facebook/mms-tts-sqi` (~400 MB, cached after first run)
 2. Synthesises every word, sentence, and phrase
-3. Saves MP3s into `assets/audio/words/`, `sentences/`, `phrases/`
+3. Saves MP3s into `assets/audio/words/`, `sentences/`, `praises/`
 4. **Auto-writes `src/data/audioFiles.ts`** with the correct require() map
 
 ### Step 2 — Rebuild the web bundle

@@ -88,7 +88,7 @@ function Summary({ score, total, onReplay, onHome, name }: {
 export default function FillBlank() {
   const router = useRouter();
   const { activeProfile } = useProfile();
-  const { speak, praise, stop } = useSpeech();
+  const { speak, praise, stop, mistake } = useSpeech();
 
   const [game, setGame] = useState<Round[]>(() => buildGame());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -129,6 +129,7 @@ export default function FillBlank() {
       };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      mistake();
       setShowFail(true);
       failTimer.current = setTimeout(() => setShowFail(false), 1400);
     }

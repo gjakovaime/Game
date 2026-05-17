@@ -15,6 +15,8 @@ const mime = {
   '.svg': 'image/svg+xml',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
 };
 
 const server = http.createServer((req, res) => {

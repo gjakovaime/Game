@@ -175,7 +175,7 @@ const sumStyles = StyleSheet.create({
 export default function SentenceBuilder() {
   const router = useRouter();
   const { activeProfile } = useProfile();
-  const { speak, praise, stop } = useSpeech();
+  const { speak, praise, stop, mistake } = useSpeech();
 
   const [showInstructions, setShowInstructions] = useState(true);
   const [sentences, setSentences] = useState<Sentence[]>(() => getRandomSentences(ROUNDS));
@@ -248,6 +248,7 @@ export default function SentenceBuilder() {
       };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      mistake();
       setFlashColor(Colors.error);
       setShowFail(true);
       failTimer.current = setTimeout(() => setShowFail(false), 1400);

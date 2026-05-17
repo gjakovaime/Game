@@ -91,7 +91,7 @@ function Summary({ moves, onReplay, onHome, name }: { moves: number; onReplay: (
 export default function MemoryMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
-  const { speak, praise, stop } = useSpeech();
+  const { speak, praise, stop, mistake } = useSpeech();
 
   const [cards, setCards] = useState<CardData[]>(() => buildCards());
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
@@ -146,6 +146,7 @@ export default function MemoryMatch() {
         };
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        mistake();
         setShowFail(true);
         setTimeout(() => {
           setShowFail(false);

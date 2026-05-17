@@ -129,7 +129,7 @@ function Summary({ score, total, onReplay, onHome, profileName }: SummaryProps) 
 export default function PictureMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
-  const { speak, praise, stop } = useSpeech();
+  const { speak, praise, stop, mistake } = useSpeech();
 
   const [game, setGame] = useState<RoundItem[]>(() => buildGame());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -172,6 +172,7 @@ export default function PictureMatch() {
       };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      mistake();
       setShowFail(true);
       failTimer.current = setTimeout(() => setShowFail(false), 1400);
     }

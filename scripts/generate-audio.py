@@ -6,7 +6,7 @@ Run from the Game/ directory:
     docker compose --profile audio run --rm generate-audio
 
 The model (~400 MB) is downloaded on first run and cached in the hf-cache volume.
-Generated MP3s land in assets/audio/{words,sentences,phrases}/.
+Generated MP3s land in assets/audio/{words,sentences,praises}/.
 """
 
 import io
@@ -74,7 +74,7 @@ SENTENCES = {
     "we-go-school":  "Ne shkojmë në shkollë",
 }
 
-PHRASES = {
+praises = {
     "bravo":         "Bravo!",
     "sakte":         "Saktë!",
     "provo-perseri": "Provo përsëri!",
@@ -113,7 +113,7 @@ def write_audio_files_ts() -> None:
     mapping = [
         ("words",     WORDS),
         ("sentences", SENTENCES),
-        ("phrases",   PHRASES),
+        ("praises",   praises),
     ]
     for subdir, items in mapping:
         for file_id, text in items.items():
@@ -138,7 +138,7 @@ def main() -> None:
     model.eval()
     print("Model ready.\n")
 
-    sections = [("words", WORDS), ("sentences", SENTENCES), ("phrases", PHRASES)]
+    sections = [("words", WORDS), ("sentences", SENTENCES), ("praises", praises)]
     for subdir, items in sections:
         label = subdir.capitalize()
         print(f"── {label} {'─' * (38 - len(label))}")

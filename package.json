@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "EXPO_OFFLINE=1 expo export --platform web --output-dir dist"
+    "build:web": "EXPO_OFFLINE=1 expo export --platform web --output-dir dist",
+    "sync-audio": "node scripts/sync-audio.js"
   },
   "dependencies": {
     "expo": "~54.0.33",

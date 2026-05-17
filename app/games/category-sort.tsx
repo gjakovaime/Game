@@ -46,7 +46,7 @@ function Summary({ score, total, onReplay, onHome, name }: {
 export default function CategorySort() {
   const router = useRouter();
   const { activeProfile } = useProfile();
-  const { speak, praise, stop } = useSpeech();
+  const { speak, praise, stop, mistake } = useSpeech();
 
   const [queue, setQueue] = useState<VocabItem[]>(() => buildQueue());
   const [idx, setIdx] = useState(0);
@@ -86,6 +86,7 @@ export default function CategorySort() {
       };
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      mistake();
       setShowFail(true);
       failTimer.current = setTimeout(() => {
         setFlash(null);

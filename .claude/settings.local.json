@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm *)",
+      "Bash(*)",
       "Bash(docker compose exec *)"
     ]
   }
