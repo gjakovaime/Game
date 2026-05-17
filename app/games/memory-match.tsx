@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
+import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
@@ -75,6 +75,7 @@ function Summary({ moves, onReplay, onHome, name }: { moves: number; onReplay: (
   const stars = moves <= PAIR_COUNT + 2 ? 3 : moves <= PAIR_COUNT * 2 ? 2 : 1;
   return (
     <View style={styles.summary}>
+      <SummaryCelebration />
       <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
       <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={styles.summaryScore}>{moves} lëvizje!</Text>
@@ -99,11 +100,9 @@ export default function MemoryMatch() {
   const [moves, setMoves] = useState(0);
   const [matches, setMatches] = useState(0);
   const [done, setDone] = useState(false);
-  const [showBurst, setShowBurst] = useState(false);
-  const [showFail, setShowFail] = useState(false);
   const [gridSize, setGridSize] = useState({ w: 0, h: 0 });
   const locked = useRef(false);
-  const advanceGame = useRef<(() => void) | null>(null);
+  const matchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cardSize = gridSize.w > 0
     ? Math.floor(Math.min(
@@ -112,7 +111,16 @@ export default function MemoryMatch() {
       ))
     : 80;
 
-  useEffect(() => () => stop(), []);
+  useEffect(() => {
+    if (done) praise();
+  }, [done]);
+
+  useEffect(() => {
+    return () => {
+      stop();
+      if (matchTimer.current) clearTimeout(matchTimer.current);
+    };
+  }, []);
 
   const handleCard = useCallback((card: CardData) => {
     if (locked.current) return;
@@ -142,19 +150,15 @@ export default function MemoryMatch() {
       speak(card.item.albanian);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       praise();
-      setShowBurst(true);
-      advanceGame.current = () => {
-        setShowBurst(false);
+      matchTimer.current = setTimeout(() => {
         if (newMatches >= PAIR_COUNT) setDone(true);
         locked.current = false;
-      };
+      }, 600);
     } else {
       speak(card.item.albanian);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       mistake();
-      setShowFail(true);
-      setTimeout(() => {
-        setShowFail(false);
+      matchTimer.current = setTimeout(() => {
         setCardStates(prev => ({ ...prev, [a]: 'hidden', [b]: 'hidden' }));
         setFlipped([]);
         locked.current = false;
@@ -163,13 +167,13 @@ export default function MemoryMatch() {
   }, [cards, cardStates, flipped, matches, speak, praise, mistake]);
 
   function handleReplay() {
+    if (matchTimer.current) clearTimeout(matchTimer.current);
     setCards(buildCards());
     setCardStates({});
     setFlipped([]);
     setMoves(0);
     setMatches(0);
     setDone(false);
-    setShowBurst(false);
     locked.current = false;
   }
 
