@@ -1,8 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
@@ -32,19 +31,19 @@ function buildCards(): CardData[] {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function MemoryCard({ card, state, onPress, cardSize }: { card: CardData; state: CardState; onPress: () => void; cardSize: number }) {
-  const scale = useSharedValue(1);
+  const scale = useRef(new Animated.Value(1)).current;
   const prevRevealed = useRef(false);
   const isRevealed = state !== 'hidden';
 
   useEffect(() => {
     if (isRevealed && !prevRevealed.current) {
-      scale.value = 0.75;
-      scale.value = withSpring(1, { damping: 10, stiffness: 180 });
+      scale.setValue(0.75);
+      Animated.spring(scale, { toValue: 1, damping: 10, stiffness: 180, useNativeDriver: true }).start();
     }
     prevRevealed.current = isRevealed;
   }, [isRevealed]);
 
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const animStyle = { transform: [{ scale }] };
 
   const bg = state === 'matched' ? Colors.successLight : isRevealed ? Colors.surface : Colors.youngLight;
   const border = state === 'matched' ? Colors.success : isRevealed ? Colors.young : Colors.border;

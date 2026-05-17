@@ -2,20 +2,13 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Image,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
@@ -56,25 +49,24 @@ type TileProps = {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function ChoiceTile({ item, onPress, state }: TileProps) {
-  const scale = useSharedValue(1);
-  const shakeX = useSharedValue(0);
+  const scale = useRef(new Animated.Value(1)).current;
+  const shakeX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (state === 'correct') {
-      scale.value = withSpring(1.08, { damping: 8 });
+      Animated.spring(scale, { toValue: 1.08, damping: 8, useNativeDriver: true }).start();
     } else if (state === 'wrong') {
-      shakeX.value = withRepeat(
-        withSequence(withTiming(-8, { duration: 60 }), withTiming(8, { duration: 60 })),
-        4,
-        true,
-        () => { shakeX.value = 0; }
-      );
+      Animated.sequence([
+        Animated.timing(shakeX, { toValue: -8, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 8, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: -8, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 8, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start();
     }
   }, [state]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: shakeX.value }],
-  }));
+  const animStyle = { transform: [{ scale }, { translateX: shakeX }] };
 
   const bgColor =
     state === 'correct' ? Colors.successLight :

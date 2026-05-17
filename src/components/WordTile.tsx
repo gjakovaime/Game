@@ -1,10 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import React, { useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { Colors, FontSizes, Radii, Spacing } from '../constants/colors';
 
 type Props = {
@@ -17,17 +12,14 @@ type Props = {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function WordTile({ word, onPress, variant = 'pool', disabled = false }: Props) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const scale = useRef(new Animated.Value(1)).current;
+  const animatedStyle = { transform: [{ scale }] };
 
   function handlePressIn() {
-    scale.value = withSpring(0.93, { damping: 15 });
+    Animated.spring(scale, { toValue: 0.93, damping: 15, useNativeDriver: true }).start();
   }
   function handlePressOut() {
-    scale.value = withSpring(1, { damping: 15 });
+    Animated.spring(scale, { toValue: 1, damping: 15, useNativeDriver: true }).start();
   }
 
   const isSlot = variant === 'slot';

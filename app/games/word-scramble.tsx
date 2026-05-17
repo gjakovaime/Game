@@ -1,8 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
@@ -41,13 +40,13 @@ function buildItems(): VocabItem[] {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function LetterTile({ letter, variant, onPress }: { letter: Letter; variant: 'pool' | 'placed'; onPress: () => void }) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const scale = useRef(new Animated.Value(1)).current;
+  const animStyle = { transform: [{ scale }] };
   return (
     <AnimatedPressable
       onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.88, { damping: 15 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
+      onPressIn={() => { Animated.spring(scale, { toValue: 0.88, damping: 15, useNativeDriver: true }).start(); }}
+      onPressOut={() => { Animated.spring(scale, { toValue: 1, damping: 15, useNativeDriver: true }).start(); }}
       style={[styles.letterTile, animStyle, { backgroundColor: variant === 'pool' ? Colors.older : Colors.secondary }]}
       accessibilityLabel={letter.char}
     >
@@ -57,16 +56,19 @@ function LetterTile({ letter, variant, onPress }: { letter: Letter; variant: 'po
 }
 
 function PlacedRow({ letters, onRemove, shaking }: { letters: Letter[]; onRemove: (letter: Letter) => void; shaking: boolean }) {
-  const shakeX = useSharedValue(0);
+  const shakeX = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (shaking) {
-      shakeX.value = withRepeat(
-        withSequence(withTiming(-10, { duration: 60 }), withTiming(10, { duration: 60 })),
-        4, true, () => { shakeX.value = 0; }
-      );
+      Animated.sequence([
+        Animated.timing(shakeX, { toValue: -10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: -10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start();
     }
   }, [shaking]);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
+  const animStyle = { transform: [{ translateX: shakeX }] };
   return (
     <Animated.View style={[styles.placedRow, animStyle]}>
       {letters.map(l => (

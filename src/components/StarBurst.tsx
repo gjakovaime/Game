@@ -1,14 +1,5 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 const PARTICLES = [
   { emoji: '⭐', size: 30 },
@@ -36,42 +27,41 @@ type ParticleProps = {
 };
 
 function Particle({ emoji, size, angle, delay, radius }: ParticleProps) {
-  const opacity = useSharedValue(0);
-  const tx = useSharedValue(0);
-  const ty = useSharedValue(0);
-  const scale = useSharedValue(0);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const tx = useRef(new Animated.Value(0)).current;
+  const ty = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0)).current;
 
   const rad = (angle * Math.PI) / 180;
   const targetX = Math.cos(rad) * radius;
   const targetY = Math.sin(rad) * radius;
 
   useEffect(() => {
-    opacity.value = withDelay(
-      delay,
-      withSequence(
-        withTiming(1, { duration: 120 }),
-        withDelay(350, withTiming(0, { duration: 500 }))
-      )
-    );
-    tx.value = withDelay(delay, withTiming(targetX, { duration: 850, easing: Easing.out(Easing.quad) }));
-    ty.value = withDelay(
-      delay,
-      withSequence(
-        withTiming(targetY, { duration: 550, easing: Easing.out(Easing.quad) }),
-        withTiming(targetY + 140, { duration: 450, easing: Easing.in(Easing.quad) })
-      )
-    );
-    scale.value = withDelay(delay, withSpring(1, { damping: 5, stiffness: 200 }));
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(opacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+      Animated.delay(350),
+      Animated.timing(opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
+
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(tx, { toValue: targetX, duration: 850, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
+
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(ty, { toValue: targetY, duration: 550, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(ty, { toValue: targetY + 140, duration: 450, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+    ]).start();
+
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.spring(scale, { toValue: 1, damping: 5, stiffness: 200, useNativeDriver: true }),
+    ]).start();
   }, []);
 
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [
-      { translateX: tx.value },
-      { translateY: ty.value },
-      { scale: scale.value },
-    ],
-  }));
+  const animStyle = { opacity, transform: [{ translateX: tx }, { translateY: ty }, { scale }] };
 
   return (
     <Animated.View style={[styles.particle, animStyle]}>

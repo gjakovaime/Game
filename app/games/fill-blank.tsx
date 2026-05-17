@@ -1,8 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
@@ -37,18 +36,21 @@ function buildGame(): Round[] {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function ChoiceBtn({ word, onPress, state }: { word: string; onPress: () => void; state: 'idle' | 'correct' | 'wrong' }) {
-  const shakeX = useSharedValue(0);
+  const shakeX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (state === 'wrong') {
-      shakeX.value = withRepeat(
-        withSequence(withTiming(-10, { duration: 55 }), withTiming(10, { duration: 55 })),
-        4, true, () => { shakeX.value = 0; }
-      );
+      Animated.sequence([
+        Animated.timing(shakeX, { toValue: -10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: -10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0, duration: 55, useNativeDriver: true }),
+      ]).start();
     }
   }, [state]);
 
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
+  const animStyle = { transform: [{ translateX: shakeX }] };
 
   const bg = state === 'correct' ? Colors.successLight : state === 'wrong' ? Colors.errorLight : Colors.surface;
   const border = state === 'correct' ? Colors.success : state === 'wrong' ? Colors.error : Colors.border;

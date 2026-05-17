@@ -1,8 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
@@ -25,22 +24,25 @@ function buildGame(): Round[] {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function AnswerTile({ n, state, onPress }: { n: number; state: 'idle' | 'correct' | 'wrong'; onPress: () => void }) {
-  const scale = useSharedValue(1);
-  const shakeX = useSharedValue(0);
+  const scale = useRef(new Animated.Value(1)).current;
+  const shakeX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (state === 'correct') scale.value = withSpring(1.08, { damping: 8 });
+    if (state === 'correct') {
+      Animated.spring(scale, { toValue: 1.08, damping: 8, useNativeDriver: true }).start();
+    }
     if (state === 'wrong') {
-      shakeX.value = withRepeat(
-        withSequence(withTiming(-10, { duration: 55 }), withTiming(10, { duration: 55 })),
-        4, true, () => { shakeX.value = 0; }
-      );
+      Animated.sequence([
+        Animated.timing(shakeX, { toValue: -10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: -10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 10, duration: 55, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0, duration: 55, useNativeDriver: true }),
+      ]).start();
     }
   }, [state]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: shakeX.value }],
-  }));
+  const animStyle = { transform: [{ scale }, { translateX: shakeX }] };
 
   const bg = state === 'correct' ? Colors.successLight : state === 'wrong' ? Colors.errorLight : Colors.surface;
   const border = state === 'correct' ? Colors.success : state === 'wrong' ? Colors.error : Colors.border;

@@ -9,12 +9,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SceneIllustration } from '../../src/components/SceneIllustration';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
@@ -95,22 +89,17 @@ type TrayProps = {
 };
 
 function AnswerTray({ placed, totalSlots, onRemove, flashColor }: TrayProps) {
-  const borderColor = useSharedValue(Colors.border);
+  const [trayBorderColor, setTrayBorderColor] = useState(Colors.border);
 
   useEffect(() => {
-    if (flashColor) {
-      borderColor.value = withSequence(
-        withTiming(flashColor, { duration: 100 }),
-        withTiming(flashColor, { duration: 600 }),
-        withTiming(Colors.border, { duration: 300 }),
-      );
-    }
+    if (!flashColor) return;
+    setTrayBorderColor(flashColor);
+    const t = setTimeout(() => setTrayBorderColor(Colors.border), 700);
+    return () => clearTimeout(t);
   }, [flashColor]);
 
-  const animStyle = useAnimatedStyle(() => ({ borderColor: borderColor.value }));
-
   return (
-    <Animated.View style={[trayStyles.tray, animStyle]}>
+    <View style={[trayStyles.tray, { borderColor: trayBorderColor }]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={trayStyles.scroll}>
         {Array.from({ length: totalSlots }).map((_, i) => {
           const word = placed[i];
@@ -121,7 +110,7 @@ function AnswerTray({ placed, totalSlots, onRemove, flashColor }: TrayProps) {
           );
         })}
       </ScrollView>
-    </Animated.View>
+    </View>
   );
 }
 

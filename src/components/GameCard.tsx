@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import React, { useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, FontSizes, Radii, Spacing } from '../constants/colors';
 
 type Props = {
@@ -19,12 +18,11 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function GameCard({ title, subtitle, emoji, bgColor, accentColor, route, locked, lockedMessage }: Props) {
   const router = useRouter();
-  const scale = useSharedValue(1);
+  const scale = useRef(new Animated.Value(1)).current;
+  const animStyle = { transform: [{ scale }] };
 
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
-  function handlePressIn() { scale.value = withSpring(0.96, { damping: 15 }); }
-  function handlePressOut() { scale.value = withSpring(1, { damping: 15 }); }
+  function handlePressIn() { Animated.spring(scale, { toValue: 0.96, damping: 15, useNativeDriver: true }).start(); }
+  function handlePressOut() { Animated.spring(scale, { toValue: 1, damping: 15, useNativeDriver: true }).start(); }
 
   function handlePress() {
     if (!locked) router.push(route as any);
