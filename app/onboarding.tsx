@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarPicker, AVATARS } from '../src/components/AvatarPicker';
 import { Colors, FontSizes, Radii, Spacing } from '../src/constants/colors';
+import { buttonGloss } from '../src/constants/styles';
 import { useProfile } from '../src/hooks/useProfile';
 
 type Step = 'name' | 'age' | 'avatar';
@@ -241,6 +242,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
   btn: {
+    ...buttonGloss,
     backgroundColor: Colors.primary,
     borderRadius: Radii.full,
     paddingVertical: Spacing.lg,

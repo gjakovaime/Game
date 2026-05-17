@@ -1,6 +1,5 @@
-import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Profile } from '../hooks/useProfile';
 import { Colors, FontSizes, Radii, Spacing } from '../constants/colors';
 
@@ -9,20 +8,14 @@ type Props = {
 };
 
 export function ProfileBadge({ profile }: Props) {
-  const router = useRouter();
-
   return (
-    <Pressable
-      style={styles.container}
-      onPress={() => router.push('/home' as any)}
-      accessibilityRole="button"
-      accessibilityLabel={`Profile: ${profile.name}`}
-    >
+    <View style={styles.container}>
       <View style={styles.avatar}>
         <Text style={styles.avatarEmoji}>{profile.avatarEmoji}</Text>
       </View>
       <Text style={styles.name}>{profile.name}</Text>
-    </Pressable>
+      <Text style={styles.caret}>▾</Text>
+    </View>
   );
 }
 
@@ -58,5 +51,10 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     fontWeight: '700',
     color: Colors.text,
+  },
+  caret: {
+    fontSize: 12,
+    color: Colors.textLight,
+    marginLeft: Spacing.xs,
   },
 });

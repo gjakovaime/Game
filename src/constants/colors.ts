@@ -1,33 +1,37 @@
+// Color values are defined in src/styles/theme.css as CSS custom properties.
+// Edit theme.css to retheme the app — changes propagate here automatically.
+// NOTE: CSS var() references are resolved by React Native Web. If ever building
+//       for iOS/Android, replace these with literal hex values.
+
 export const Colors = {
-  primary: '#E8445A',        // Albanian flag red
-  primaryDark: '#C73650',
-  secondary: '#4ECDC4',      // teal
-  secondaryDark: '#3BAFA7',
-  accent: '#FFD93D',         // sunny yellow
+  primary:        'var(--color-primary)',
+  primaryDark:    'var(--color-primary-dark)',
+  secondary:      'var(--color-secondary)',
+  secondaryDark:  'var(--color-secondary-dark)',
+  accent:         'var(--color-accent)',
 
-  background: '#FFF8F0',     // warm cream
-  surface: '#FFFFFF',
-  border: '#EDE8E0',
+  background:  'var(--color-background)',
+  surface:     'var(--color-surface)',
+  border:      'var(--color-border)',
 
-  text: '#2D3047',           // deep navy
-  textLight: '#8E8FA8',
-  textOnPrimary: '#FFFFFF',
+  text:           'var(--color-text)',
+  textLight:      'var(--color-text-light)',
+  textOnPrimary:  'var(--color-text-on-primary)',
 
-  success: '#6BCB77',
-  successLight: '#E8F7EA',
-  error: '#FF6B6B',
-  errorLight: '#FFEEEE',
-  warning: '#FFD93D',
+  success:       'var(--color-success)',
+  successLight:  'var(--color-success-light)',
+  error:         'var(--color-error)',
+  errorLight:    'var(--color-error-light)',
+  warning:       'var(--color-warning)',
 
-  young: '#FF9F43',          // warm orange — 3-6 section
-  youngLight: '#FFF3E6',
-  older: '#5B5EA6',          // indigo — 7+ section
-  olderLight: '#EEEEF8',
+  young:       'var(--color-young)',
+  youngLight:  'var(--color-young-light)',
+  older:       'var(--color-older)',
+  olderLight:  'var(--color-older-light)',
 
-  star: '#FFD93D',
-  starEmpty: '#DDD8F0',
-
-  avatarBg: '#FFF0F3',
+  star:       'var(--color-star)',
+  starEmpty:  'var(--color-star-empty)',
+  avatarBg:   'var(--color-avatar-bg)',
 };
 
 export const FontSizes = {

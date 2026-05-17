@@ -1,8 +1,7 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,8 +16,10 @@ import { useProfile } from '../src/hooks/useProfile';
 
 export default function Home() {
   const router = useRouter();
-  const { activeProfile, profiles, switchProfile, saveProfile, loaded } = useProfile();
+  const { activeProfile, profiles, switchProfile, loaded, reload } = useProfile();
   const [showProfiles, setShowProfiles] = useState(false);
+
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
   useEffect(() => {
     if (loaded && !activeProfile) {
@@ -41,15 +42,8 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => setShowProfiles(true)}>
+          <Pressable onPress={() => setShowProfiles(v => !v)} accessibilityRole="button" accessibilityLabel="Switch player">
             <ProfileBadge profile={activeProfile} />
-          </Pressable>
-          <Pressable
-            style={styles.addBtn}
-            onPress={() => router.push('/onboarding')}
-            accessibilityLabel="Add profile"
-          >
-            <Text style={styles.addBtnText}>+ Lojtar</Text>
           </Pressable>
         </View>
 
@@ -155,38 +149,33 @@ export default function Home() {
         <Text style={styles.footer}>Mëso shqipen duke luajtur!</Text>
       </ScrollView>
 
-      {/* Profile switcher modal */}
-      <Modal visible={showProfiles} transparent animationType="slide" onRequestClose={() => setShowProfiles(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowProfiles(false)}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Zgjidh lojtarin</Text>
-            {profiles.map((p) => (
-              <Pressable
-                key={p.id}
-                style={[styles.profileRow, p.id === activeProfile.id && styles.profileRowActive]}
-                onPress={() => { switchProfile(p.id); setShowProfiles(false); }}
-              >
-                <Text style={styles.profileEmoji}>{p.avatarEmoji}</Text>
-                <Text style={styles.profileName}>{p.name}</Text>
-                {p.id === activeProfile.id && <Text style={styles.check}>✓</Text>}
-              </Pressable>
-            ))}
-            {/* Animations toggle for active profile */}
+      {/* Dropdown overlay — closes on outside tap */}
+      {showProfiles && (
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowProfiles(false)} />
+      )}
+
+      {/* Profile dropdown */}
+      {showProfiles && (
+        <View style={styles.dropdown}>
+          {profiles.map((p) => (
             <Pressable
-              style={styles.animToggleRow}
-              onPress={() => saveProfile({ ...activeProfile, animationsEnabled: !activeProfile.animationsEnabled })}
+              key={p.id}
+              style={[styles.dropdownRow, p.id === activeProfile.id && styles.dropdownRowActive]}
+              onPress={() => { switchProfile(p.id); setShowProfiles(false); }}
             >
-              <Text style={styles.animToggleLabel}>Animacionet</Text>
-              <View style={[styles.toggleTrack, activeProfile.animationsEnabled && styles.toggleTrackOn]}>
-                <View style={[styles.toggleThumb, activeProfile.animationsEnabled && styles.toggleThumbOn]} />
-              </View>
+              <Text style={styles.dropdownEmoji}>{p.avatarEmoji}</Text>
+              <Text style={styles.dropdownName}>{p.name}</Text>
+              {p.id === activeProfile.id && <Text style={styles.dropdownCheck}>✓</Text>}
             </Pressable>
-            <Pressable style={styles.closeBtn} onPress={() => setShowProfiles(false)}>
-              <Text style={styles.closeBtnText}>Mbyll</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
+          ))}
+          <Pressable
+            style={styles.dropdownAddRow}
+            onPress={() => { setShowProfiles(false); router.push('/onboarding'); }}
+          >
+            <Text style={styles.dropdownAddText}>+ Lojtar i ri</Text>
+          </Pressable>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -195,68 +184,46 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.xxl },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
-  addBtn: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  addBtnText: { color: Colors.primary, fontWeight: '700', fontSize: FontSizes.sm },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg },
   welcome: { marginBottom: Spacing.xl },
   welcomeText: { fontSize: FontSizes.xl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.xs },
   welcomeSub: { fontSize: FontSizes.md, color: Colors.text, marginBottom: 2 },
   welcomeSubEn: { fontSize: FontSizes.sm, color: Colors.textLight },
   sectionLabel: { fontSize: FontSizes.md, fontWeight: '800', marginBottom: Spacing.sm, marginTop: Spacing.sm },
   footer: { textAlign: 'center', fontSize: FontSizes.md, color: Colors.textLight, marginTop: Spacing.xl },
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalSheet: {
+  // Dropdown
+  dropdown: {
+    position: 'absolute',
+    top: 72,
+    left: Spacing.lg,
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radii.xl,
-    borderTopRightRadius: Radii.xl,
-    padding: Spacing.xl,
-  },
-  modalTitle: { fontSize: FontSizes.lg, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
     borderRadius: Radii.lg,
-    marginBottom: Spacing.sm,
-    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 12,
+    zIndex: 100,
+    overflow: 'hidden',
   },
-  profileRowActive: { backgroundColor: Colors.avatarBg, borderWidth: 2, borderColor: Colors.primary },
-  profileEmoji: { fontSize: 32, marginRight: Spacing.md },
-  profileName: { flex: 1, fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text },
-  check: { fontSize: FontSizes.lg, color: Colors.primary, fontWeight: '900' },
-  animToggleRow: {
+  dropdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
-  animToggleLabel: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.text },
-  toggleTrack: {
-    width: 48, height: 26, borderRadius: Radii.full,
-    backgroundColor: Colors.border, justifyContent: 'center', padding: 3,
+  dropdownRowActive: { backgroundColor: Colors.background },
+  dropdownEmoji: { fontSize: 24, marginRight: Spacing.sm },
+  dropdownName: { flex: 1, fontSize: FontSizes.md, fontWeight: '700', color: Colors.text },
+  dropdownCheck: { fontSize: FontSizes.md, color: Colors.primary, fontWeight: '900' },
+  dropdownAddRow: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
-  toggleTrackOn: { backgroundColor: Colors.success },
-  toggleThumb: {
-    width: 20, height: 20, borderRadius: Radii.full,
-    backgroundColor: Colors.surface,
-  },
-  toggleThumbOn: { alignSelf: 'flex-end' },
-  closeBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.full,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    marginTop: Spacing.md,
-  },
-  closeBtnText: { color: Colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.md },
+  dropdownAddText: { fontSize: FontSizes.sm, fontWeight: '700', color: Colors.primary },
 });

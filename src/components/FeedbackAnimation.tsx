@@ -54,7 +54,7 @@ export function FeedbackAnimation({ type, visible, onComplete }: Props) {
       timerRef.current = setTimeout(() => onCompleteRef.current?.(), ms);
     } else {
       // Enabled — onAnimationFinish fires first; this is just a safety fallback
-      timerRef.current = setTimeout(() => onCompleteRef.current?.(), 15000);
+      timerRef.current = setTimeout(() => onCompleteRef.current?.(), 3000);
     }
 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };

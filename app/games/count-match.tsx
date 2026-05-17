@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, w
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { buttonGloss } from '../../src/constants/styles';
 import { MATH_CONFIG, NumberItem, getNumber, getWrongAnswers } from '../../src/data/numbers';
 import { VOCABULARY } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
@@ -129,7 +130,7 @@ export default function CountMatch() {
 
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      praise(activeProfile?.name);
+      praise();
       setShowBurst(true);
       setScore(s => s + 1);
       const word = getNumber(n)?.albanian ?? String(n);
@@ -194,7 +195,6 @@ export default function CountMatch() {
       </View>
 
       <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
-      <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );
 }
@@ -231,6 +231,6 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
   summaryStars: { fontSize: 48, marginBottom: Spacing.md },
   summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
   btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
 });

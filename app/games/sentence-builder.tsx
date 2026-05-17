@@ -20,6 +20,7 @@ import { SceneIllustration } from '../../src/components/SceneIllustration';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { WordTile } from '../../src/components/WordTile';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { buttonGloss } from '../../src/constants/styles';
 import { Sentence, getRandomSentences } from '../../src/data/sentences';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useSpeech } from '../../src/hooks/useSpeech';
@@ -78,7 +79,7 @@ const iStyles = StyleSheet.create({
   stepAlb: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.text },
   stepEn: { fontSize: FontSizes.xs, color: Colors.textLight },
   btn: {
-    backgroundColor: Colors.older, borderRadius: Radii.full,
+    ...buttonGloss, backgroundColor: Colors.older, borderRadius: Radii.full,
     paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.md,
   },
   btnText: { color: Colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.lg },
@@ -166,7 +167,7 @@ const sumStyles = StyleSheet.create({
   title: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, textAlign: 'center', marginBottom: Spacing.md },
   stars: { fontSize: 48, marginBottom: Spacing.md },
   score: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
   btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
 });
 

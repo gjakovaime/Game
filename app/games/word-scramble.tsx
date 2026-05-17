@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, w
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { buttonGloss } from '../../src/constants/styles';
 import { VOCABULARY, VocabItem } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useSpeech } from '../../src/hooks/useSpeech';
@@ -140,7 +141,7 @@ export default function WordScramble() {
     const attempt = placed.map(l => l.char).join('');
     if (attempt === currentItem.albanian) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      praise(activeProfile?.name);
+      praise();
       setShowBurst(true);
       setScore(s => s + 1);
       advanceGame.current = () => {
@@ -292,6 +293,6 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
   summaryStars: { fontSize: 48, marginBottom: Spacing.md },
   summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
   btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
 });

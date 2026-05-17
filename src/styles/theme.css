@@ -1,0 +1,47 @@
+/* ─── Albanian Adventures — global theme ────────────────────────────────────
+   Edit values here to retheme the entire app.
+   All colors are consumed by src/constants/colors.ts via CSS custom properties.
+   NOTE: StyleSheet.create is kept in TypeScript (required for React Native mobile).
+         These variables are resolved by React Native Web at render time.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Brand */
+  --color-primary:        #E8445A;
+  --color-primary-dark:   #C73650;
+  --color-secondary:      #4ECDC4;
+  --color-secondary-dark: #3BAFA7;
+  --color-accent:         #FFD93D;
+
+  /* Surfaces */
+  --color-background:  #0D1B3E;
+  --color-surface:     #162550;
+  --color-border:      #243870;
+
+  /* Text */
+  --color-text:           #F0F4FF;
+  --color-text-light:     #8AAAD4;
+  --color-text-on-primary: #FFFFFF;
+
+  /* Feedback */
+  --color-success:       #6BCB77;
+  --color-success-light: #0E3B1A;
+  --color-error:         #FF6B6B;
+  --color-error-light:   #3B0E0E;
+  --color-warning:       #FFD93D;
+
+  /* Age groups */
+  --color-young:       #FF9F43;
+  --color-young-light: #7B7FD4;
+  --color-older:       #7B7FD4;
+  --color-older-light: #1A1B3A;
+
+  /* Misc */
+  --color-star:       #FFD93D;
+  --color-star-empty: #2D3866;
+  --color-avatar-bg:  #1E2B5C;
+
+  /* Glossy button overlay (web-only CSS effect) */
+  --gloss-gradient: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 55%, rgba(0,0,0,0.08) 100%);
+  --gloss-shadow:   inset 0 1px 1px rgba(255,255,255,0.28), 0 4px 16px rgba(0,0,0,0.45);
+}

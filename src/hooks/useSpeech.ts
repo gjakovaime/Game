@@ -46,19 +46,19 @@ function stopWebAudio() {
   if (_webAudio) { _webAudio.pause(); _webAudio.src = ''; _webAudio = null; }
 }
 
-function speakWeb(candidates: string[], text: string, rate: number): void {
+function speakWeb(candidates: string[], rate: number, onEnd?: () => void): void {
   stopWebAudio();
   let idx = 0;
 
   const tryNext = () => {
-    if (idx >= candidates.length) return;
+    if (idx >= candidates.length) { onEnd?.(); return; }
     const uri = candidates[idx++];
     const audio = new (window as any).Audio(uri) as HTMLAudioElement;
     _webAudio = audio;
     audio.onerror  = () => { if (_webAudio === audio) { _webAudio = null; tryNext(); } };
-    audio.onended  = () => { if (_webAudio === audio) _webAudio = null; };
+    audio.onended  = () => { if (_webAudio === audio) { _webAudio = null; onEnd?.(); } };
     audio.playbackRate = rate;
-    audio.play().catch(() => { _webAudio = null; });
+    audio.play().catch(() => { if (_webAudio === audio) { _webAudio = null; tryNext(); } });
   };
 
   tryNext();
@@ -105,11 +105,11 @@ export function useSpeech() {
     stopWebAudio();
   }, []);
 
-  const speak = useCallback((text: string, rate = 1) => {
+  const speak = useCallback((text: string, rate = 1, onEnd?: () => void) => {
     stop();
     const doSpeak = () => {
       if (!isMounted.current) return;
-      speakWeb(wordCandidates(normalizeAudioKey(text)), text, rate);
+      speakWeb(wordCandidates(normalizeAudioKey(text)), rate, onEnd);
     };
     if (_unlocked) {
       doSpeak();

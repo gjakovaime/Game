@@ -6,3 +6,35 @@ plan/todo:
 5. the UI is blah - ask for help? New color scheme with a dark mode option
 6. how do we view it in mobile devices?
 7. explore the vooks style of: build your own story. more complex, but excellent for the 7+ age group
+
+ long term plan would be to add a game/feature where a kid can pronounce a word into the microphone
+  and get feedback whether it was understood, granted this is for albanian, so the viability of using
+   a model is critical. Perhaps i can live with pre-generating the english files for now.
+
+● That pronunciation feature is genuinely viable for Albanian — here's the landscape:
+
+  Albanian ASR options:
+
+  - OpenAI Whisper (via Transformers.js) — runs entirely in-browser via WASM, ~75MB for the tiny
+  model, supports Albanian (sq). Quality is decent for isolated words. This is probably your best
+  starting point.
+  - Meta MMS-ASR — the same Meta family as your TTS pipeline, specifically built for low-resource
+  languages including Albanian. Generally better than Whisper on underrepresented languages. Also has
+  a Transformers.js-compatible ONNX export.
+  - Cloud APIs (Google, Azure) — both support sq-AL, higher accuracy but requires connectivity and API
+   cost.
+
+  The pronunciation-check approach matters more than the model:
+
+  For a kids' game you don't need full transcription — just "did they say the right word?" Two
+  strategies:
+  1. Transcribe → compare: Run ASR, check if output matches target word (fuzzy match for Albanian
+  diacritics)
+  2. Confidence score: Pass expected word as a hint/prefix, check model confidence
+
+  Whisper + Transformers.js approach (1) is the most practical path since you'd already be using MMS
+  for TTS — consistency is a plus if you go MMS-ASR.
+
+  Viability verdict: High. Whisper tiny handles Albanian well enough for single-word recognition in a
+  controlled game context. Kids saying "macja" into a microphone is a much easier task than free-form
+  Albanian transcription.

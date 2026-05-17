@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, w
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
 import { VocabItem, getDistractors, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
@@ -109,16 +110,17 @@ export default function NameIt() {
     setChoiceStates(prev => ({ ...prev, [item.id]: isCorrect ? 'correct' : 'wrong' }));
 
     if (isCorrect) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      praise(activeProfile?.name);
-      setShowBurst(true);
       setScore(s => s + 1);
-      speak(round.correct.albanian);
       advanceGame.current = () => {
         setShowBurst(false);
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx(r => r + 1);
       };
+      speak(round.correct.albanian, 1, () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        praise();
+        setShowBurst(true);
+      });
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
@@ -185,7 +187,7 @@ export default function NameIt() {
       </View>
 
       <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
-      <FeedbackAnimation type="fail" visible={showFail} />
+      
     </SafeAreaView>
   );
 }
@@ -222,6 +224,6 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
   summaryStars: { fontSize: 48, marginBottom: Spacing.md },
   summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
   btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
 });

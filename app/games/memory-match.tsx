@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
 import { VocabItem, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
@@ -119,44 +120,49 @@ export default function MemoryMatch() {
     if (cardStates[card.id] === 'matched') return;
     if (flipped.includes(card.id)) return;
 
-    speak(card.item.albanian);
     const newFlipped = [...flipped, card.id];
     setCardStates(prev => ({ ...prev, [card.id]: 'flipped' }));
     setFlipped(newFlipped);
 
-    if (newFlipped.length === 2) {
-      locked.current = true;
-      setMoves(m => m + 1);
-      const [a, b] = newFlipped;
-      const cardA = cards.find(c => c.id === a)!;
-      const cardB = cards.find(c => c.id === b)!;
-
-      if (cardA.pairId === cardB.pairId) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-        praise(activeProfile?.name);
-        setShowBurst(true);
-        const newMatches = matches + 1;
-        setMatches(newMatches);
-        setCardStates(prev => ({ ...prev, [a]: 'matched', [b]: 'matched' }));
-        setFlipped([]);
-        advanceGame.current = () => {
-          setShowBurst(false);
-          if (newMatches >= PAIR_COUNT) setDone(true);
-          locked.current = false;
-        };
-      } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        mistake();
-        setShowFail(true);
-        setTimeout(() => {
-          setShowFail(false);
-          setCardStates(prev => ({ ...prev, [a]: 'hidden', [b]: 'hidden' }));
-          setFlipped([]);
-          locked.current = false;
-        }, 900);
-      }
+    if (newFlipped.length < 2) {
+      speak(card.item.albanian);
+      return;
     }
-  }, [cards, cardStates, flipped, matches, activeProfile]);
+
+    locked.current = true;
+    setMoves(m => m + 1);
+    const [a, b] = newFlipped;
+    const cardA = cards.find(c => c.id === a)!;
+    const cardB = cards.find(c => c.id === b)!;
+
+    if (cardA.pairId === cardB.pairId) {
+      const newMatches = matches + 1;
+      setMatches(newMatches);
+      setCardStates(prev => ({ ...prev, [a]: 'matched', [b]: 'matched' }));
+      setFlipped([]);
+      advanceGame.current = () => {
+        setShowBurst(false);
+        if (newMatches >= PAIR_COUNT) setDone(true);
+        locked.current = false;
+      };
+      speak(card.item.albanian, 1, () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        praise();
+        setShowBurst(true);
+      });
+    } else {
+      speak(card.item.albanian);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      mistake();
+      setShowFail(true);
+      setTimeout(() => {
+        setShowFail(false);
+        setCardStates(prev => ({ ...prev, [a]: 'hidden', [b]: 'hidden' }));
+        setFlipped([]);
+        locked.current = false;
+      }, 900);
+    }
+  }, [cards, cardStates, flipped, matches, speak, praise, mistake]);
 
   function handleReplay() {
     setCards(buildCards());
@@ -245,6 +251,6 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
   summaryStars: { fontSize: 48, marginBottom: Spacing.md },
   summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
   btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
 });
