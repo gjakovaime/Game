@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SceneIllustration } from '../../src/components/SceneIllustration';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
+import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { WordTile } from '../../src/components/WordTile';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
@@ -138,6 +139,7 @@ function Summary({
   const stars = firstAttemptCount >= total ? 3 : firstAttemptCount >= total * 0.6 ? 2 : 1;
   return (
     <View style={sumStyles.wrap}>
+      <SummaryCelebration />
       <Text style={sumStyles.title}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>
       <Text style={sumStyles.stars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={sumStyles.score}>{score}/{total} herë saktë!</Text>
@@ -173,7 +175,6 @@ export default function SentenceBuilder() {
   const [placed, setPlaced] = useState<string[]>([]);
   const [pool, setPool] = useState<string[]>([]);
   const [flashColor, setFlashColor] = useState<string | null>(null);
-  const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
   const [score, setScore] = useState(0);
   const [firstAttemptCount, setFirstAttemptCount] = useState(0);
@@ -181,8 +182,9 @@ export default function SentenceBuilder() {
   const [done, setDone] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const advanceGame = useRef<(() => void) | null>(null);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locked = useRef(false);
 
   const sentence = sentences[roundIdx];
 
@@ -191,7 +193,7 @@ export default function SentenceBuilder() {
     setPool([...s.albanian.split(' ')].sort(() => Math.random() - 0.5));
     setIsFirstAttempt(true);
     setFlashColor(null);
-    setShowBurst(false);
+    locked.current = false;
   }
 
   useEffect(() => {
@@ -199,8 +201,13 @@ export default function SentenceBuilder() {
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
       if (failTimer.current) clearTimeout(failTimer.current);
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
     };
   }, [roundIdx, sentences]);
+
+  useEffect(() => {
+    if (done) praise();
+  }, [done]);
 
   useEffect(() => { return () => { stop(); }; }, [stop]);
 
@@ -222,20 +229,20 @@ export default function SentenceBuilder() {
   }
 
   const handleCheck = useCallback(() => {
+    if (locked.current) return;
     const isCorrect = placed.join(' ') === sentence.albanian;
     if (isCorrect) {
+      locked.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setFlashColor(Colors.success);
-      setShowBurst(true);
       setScore((s) => s + 1);
       if (isFirstAttempt) setFirstAttemptCount((c) => c + 1);
       speak(sentence.albanian, 0.8);
       showToast('Saktë! ⭐');
-      advanceGame.current = () => {
-        setShowBurst(false);
+      advanceTimer.current = setTimeout(() => {
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx((r) => r + 1);
-      };
+      }, 800);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
@@ -344,7 +351,6 @@ export default function SentenceBuilder() {
         </View>
       )}
 
-      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );

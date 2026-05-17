@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
+import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
@@ -69,6 +69,7 @@ function Summary({ score, total, onReplay, onHome, name }: {
   const stars = score >= total ? 3 : score >= Math.ceil(total * 0.6) ? 2 : 1;
   return (
     <View style={styles.summary}>
+      <SummaryCelebration />
       <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
       <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
@@ -92,42 +93,39 @@ export default function NameIt() {
   const [choiceStates, setChoiceStates] = useState<Record<string, 'idle' | 'correct' | 'wrong'>>({});
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const [showBurst, setShowBurst] = useState(false);
-  const [showFail, setShowFail] = useState(false);
-  const advanceGame = useRef<(() => void) | null>(null);
-  const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const round = game[roundIdx];
 
   useEffect(() => {
     setChoiceStates({});
-    return () => { if (failTimer.current) clearTimeout(failTimer.current); };
+    return () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); };
   }, [roundIdx, game]);
+
+  useEffect(() => {
+    if (done) praise();
+  }, [done]);
 
   useEffect(() => () => stop(), []);
 
   const handleChoice = useCallback((item: VocabItem) => {
     if (choiceStates[item.id]) return;
+    if (Object.values(choiceStates).includes('correct')) return;
     const isCorrect = item.id === round.correct.id;
     setChoiceStates(prev => ({ ...prev, [item.id]: isCorrect ? 'correct' : 'wrong' }));
 
     if (isCorrect) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setScore(s => s + 1);
-      advanceGame.current = () => {
-        setShowBurst(false);
+      speak(round.correct.albanian);
+      advanceTimer.current = setTimeout(() => {
+        setChoiceStates({});
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx(r => r + 1);
-      };
-      speak(round.correct.albanian, 1, () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-        praise();
-        setShowBurst(true);
-      });
+      }, 700);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
-      setShowFail(true);
-      failTimer.current = setTimeout(() => setShowFail(false), 1400);
     }
   }, [round, roundIdx, choiceStates, activeProfile]);
 
@@ -137,8 +135,6 @@ export default function NameIt() {
     setScore(0);
     setDone(false);
     setChoiceStates({});
-    setShowBurst(false);
-    setShowFail(false);
   }
 
   if (done) {
@@ -188,8 +184,6 @@ export default function NameIt() {
         ))}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
-      
     </SafeAreaView>
   );
 }

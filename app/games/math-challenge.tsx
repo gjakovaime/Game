@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
+import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { MathProblem, generateProblems, getNumber, getWrongAnswers } from '../../src/data/numbers';
@@ -68,6 +69,7 @@ function Summary({ score, total, onReplay, onHome, name }: {
   const stars = score >= total ? 3 : score >= Math.ceil(total * 0.7) ? 2 : 1;
   return (
     <View style={styles.summary}>
+      <SummaryCelebration />
       <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
       <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
@@ -91,37 +93,42 @@ export default function MathChallenge() {
   const [tileStates, setTileStates] = useState<Record<number, 'idle' | 'correct' | 'wrong'>>({});
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
-  const advanceGame = useRef<(() => void) | null>(null);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const round = game[roundIdx];
 
   useEffect(() => {
     setTileStates({});
-    return () => { if (failTimer.current) clearTimeout(failTimer.current); };
+    return () => {
+      if (failTimer.current) clearTimeout(failTimer.current);
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    };
   }, [roundIdx, game]);
+
+  useEffect(() => {
+    if (done) praise();
+  }, [done]);
 
   useEffect(() => () => stop(), []);
 
   const handleAnswer = useCallback((n: number) => {
     if (tileStates[n]) return;
+    if (Object.values(tileStates).includes('correct')) return;
     const isCorrect = n === round.problem.answer;
     setTileStates(prev => ({ ...prev, [n]: isCorrect ? 'correct' : 'wrong' }));
 
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      praise();
-      setShowBurst(true);
       setScore(s => s + 1);
       const word = getNumber(n)?.albanian ?? String(n);
       speak(word);
-      advanceGame.current = () => {
-        setShowBurst(false);
+      advanceTimer.current = setTimeout(() => {
+        setTileStates({});
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx(r => r + 1);
-      };
+      }, 700);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
@@ -136,7 +143,6 @@ export default function MathChallenge() {
     setScore(0);
     setDone(false);
     setTileStates({});
-    setShowBurst(false);
     setShowFail(false);
   }
 
@@ -184,8 +190,6 @@ export default function MathChallenge() {
         ))}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
-      <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );
 }

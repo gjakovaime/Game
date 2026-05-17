@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
+import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCABULARY, VocabItem } from '../../src/data/vocabulary';
@@ -31,6 +31,7 @@ function Summary({ score, total, onReplay, onHome, name }: {
   const stars = score >= Math.ceil(total * 0.9) ? 3 : score >= Math.ceil(total * 0.6) ? 2 : 1;
   return (
     <View style={styles.summary}>
+      <SummaryCelebration />
       <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
       <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
@@ -54,17 +55,18 @@ export default function CategorySort() {
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const [flash, setFlash] = useState<{ catId: string; ok: boolean } | null>(null);
-  const [showBurst, setShowBurst] = useState(false);
-  const [showFail, setShowFail] = useState(false);
   const locked = useRef(false);
-  const advanceGame = useRef<(() => void) | null>(null);
-  const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const item = queue[idx];
 
   useEffect(() => {
     if (item) speak(item.albanian);
   }, [idx, queue]);
+
+  useEffect(() => {
+    if (done) praise();
+  }, [done]);
 
   useEffect(() => () => stop(), []);
 
@@ -75,23 +77,18 @@ export default function CategorySort() {
     setFlash({ catId, ok });
     if (ok) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      praise();
-      setShowBurst(true);
       setScore(s => s + 1);
-      advanceGame.current = () => {
+      advanceTimer.current = setTimeout(() => {
         setFlash(null);
-        setShowBurst(false);
         if (idx + 1 >= TOTAL) setDone(true);
         else setIdx(i => i + 1);
         locked.current = false;
-      };
+      }, 700);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
-      setShowFail(true);
-      failTimer.current = setTimeout(() => {
+      advanceTimer.current = setTimeout(() => {
         setFlash(null);
-        setShowFail(false);
         if (idx + 1 >= TOTAL) setDone(true);
         else setIdx(i => i + 1);
         locked.current = false;
@@ -105,8 +102,6 @@ export default function CategorySort() {
     setScore(0);
     setDone(false);
     setFlash(null);
-    setShowBurst(false);
-    setShowFail(false);
     locked.current = false;
   }
 
@@ -157,8 +152,6 @@ export default function CategorySort() {
         })}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
-      
     </SafeAreaView>
   );
 }

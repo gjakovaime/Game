@@ -139,16 +139,15 @@ export default function MemoryMatch() {
       setMatches(newMatches);
       setCardStates(prev => ({ ...prev, [a]: 'matched', [b]: 'matched' }));
       setFlipped([]);
+      speak(card.item.albanian);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      praise();
+      setShowBurst(true);
       advanceGame.current = () => {
         setShowBurst(false);
         if (newMatches >= PAIR_COUNT) setDone(true);
         locked.current = false;
       };
-      speak(card.item.albanian, 1, () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-        praise();
-        setShowBurst(true);
-      });
     } else {
       speak(card.item.albanian);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -212,8 +211,7 @@ export default function MemoryMatch() {
         ))}
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
-      <FeedbackAnimation type="fail" visible={showFail} />
+      
     </SafeAreaView>
   );
 }
