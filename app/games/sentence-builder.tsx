@@ -199,7 +199,7 @@ export default function SentenceBuilder() {
 
   function initRound(s: Sentence) {
     setPlaced([]);
-    setPool([...s.words].sort(() => Math.random() - 0.5));
+    setPool([...s.albanian.split(' ')].sort(() => Math.random() - 0.5));
     setIsFirstAttempt(true);
     setFlashColor(null);
     setShowBurst(false);
@@ -233,7 +233,7 @@ export default function SentenceBuilder() {
   }
 
   const handleCheck = useCallback(() => {
-    const isCorrect = placed.join(' ') === sentence.words.join(' ');
+    const isCorrect = placed.join(' ') === sentence.albanian;
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setFlashColor(Colors.success);
@@ -257,7 +257,7 @@ export default function SentenceBuilder() {
       showToast('Provo përsëri! 💪');
       setTimeout(() => {
         setPlaced([]);
-        setPool([...sentence.words].sort(() => Math.random() - 0.5));
+        setPool([...sentence.albanian.split(' ')].sort(() => Math.random() - 0.5));
         setFlashColor(null);
       }, 800);
     }
@@ -313,7 +313,7 @@ export default function SentenceBuilder() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Scene illustration */}
         <View style={styles.sceneWrap}>
-          <SceneIllustration illustration={sentence.illustration} sentenceId={sentence.id} size="large" />
+          <SceneIllustration illustration={sentence.illustration} sentenceId={sentence.albanian} size="large" />
         </View>
 
         <Text style={styles.instruction}>Bëj fjalinë për foton! 👇</Text>
@@ -322,7 +322,7 @@ export default function SentenceBuilder() {
         {/* Answer tray */}
         <AnswerTray
           placed={placed}
-          totalSlots={sentence.words.length}
+          totalSlots={sentence.albanian.split(' ').length}
           onRemove={removeFromPlaced}
           flashColor={flashColor}
         />

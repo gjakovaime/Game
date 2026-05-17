@@ -25,6 +25,11 @@ export const VOCABULARY: VocabItem[] = [
   { id: 'strawberry', albanian: 'dredhëza', english: 'strawberry', emoji: '🍓', category: 'fruit' },
   { id: 'watermelon', albanian: 'shalqiu', english: 'watermelon', emoji: '🍉', category: 'fruit' },
   { id: 'cherry', albanian: 'qershia', english: 'cherry', emoji: '🍒', category: 'fruit' },
+//  new entries
+  { id: 'akullore', albanian: 'akullore', english: 'ice cream', emoji: '', category: 'fruit' },
+  { id: 'speca', albanian: 'speca', english: 'peppers', emoji: '🍒', category: 'fruit' },
+  { id: 'pilaf', albanian: 'pilaf', english: 'cherry', emoji: '🍒', category: 'fruit' },
+  { id: 'cherry', albanian: 'qershia', english: 'cherry', emoji: '🍒', category: 'fruit' },
   
 
   // Ngjyra (Colors)

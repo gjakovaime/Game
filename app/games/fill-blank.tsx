@@ -17,9 +17,10 @@ const ROUNDS = 5;
 type Round = { sentence: Sentence; blankIdx: number; choices: string[] };
 
 function buildRound(sentence: Sentence): Round {
-  const blankIdx = Math.floor(Math.random() * sentence.words.length);
-  const correct = sentence.words[blankIdx].toLowerCase();
-  const used = new Set(sentence.words.map(w => w.toLowerCase()));
+  const words = sentence.albanian.split(' ');
+  const blankIdx = Math.floor(Math.random() * words.length);
+  const correct = words[blankIdx].toLowerCase();
+  const used = new Set(words.map(w => w.toLowerCase()));
   const wrongs = VOCABULARY
     .map(v => v.albanian)
     .filter(w => !used.has(w.toLowerCase()))
@@ -112,7 +113,7 @@ export default function FillBlank() {
 
   const handleChoice = useCallback((choice: string) => {
     if (choiceStates[choice]) return;
-    const correct = round.sentence.words[round.blankIdx].toLowerCase();
+    const correct = round.sentence.albanian.split(' ')[round.blankIdx].toLowerCase();
     const isCorrect = choice === correct;
 
     setChoiceStates(prev => ({ ...prev, [choice]: isCorrect ? 'correct' : 'wrong' }));
@@ -174,7 +175,7 @@ export default function FillBlank() {
       {/* Sentence with blank */}
       <View style={styles.sentenceCard}>
         <View style={styles.sentenceRow}>
-          {sentence.words.map((word, i) => (
+          {sentence.albanian.split(' ').map((word, i) => (
             i === blankIdx ? (
               <View key={i} style={styles.blankSlot}>
                 <Text style={styles.blankText}>{'_ _ _'}</Text>

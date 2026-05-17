@@ -16,7 +16,6 @@ services:
       - ./assets:/app/assets
       - ./app.json:/app/app.json
       - ./babel.config.js:/app/babel.config.js
-      - ./tsconfig.json:/app/tsconfig.json
     environment:
       - EXPO_OFFLINE=1
 
