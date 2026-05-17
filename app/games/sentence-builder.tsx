@@ -282,7 +282,7 @@ export default function SentenceBuilder() {
     );
   }
 
-  const allPlaced = placed.length === sentence.words.length;
+  const allPlaced = placed.length === sentence.albanian.split(' ').length;
 
   return (
     <SafeAreaView style={styles.safe}>

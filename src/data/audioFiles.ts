@@ -14,7 +14,6 @@ export const AUDIO_FILES: Record<string, number> = {
   'dredhwza': require('../../assets/audio/words/dredhwza.wav'),
   'dua': require('../../assets/audio/words/dua.wav'),
   'e-gjelbwr': require('../../assets/audio/words/e-gjelbwr.wav'),
-  'e-kaltwr': require('../../assets/audio/words/e-kaltwr.wav'),
   'e-kuqe': require('../../assets/audio/words/e-kuqe.wav'),
   'e-portokall': require('../../assets/audio/words/e-portokall.wav'),
   'e-verdhw': require('../../assets/audio/words/e-verdhw.wav'),

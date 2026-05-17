@@ -3,13 +3,20 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useProfile } from '../hooks/useProfile';
 
-// Auto-discover animations by naming pattern.
-// Drop any *-success.lottie or *-fail.lottie in assets/animation/ — no code changes needed.
-const successCtx = (require as any).context('../../assets/animation', false, /-success\.lottie$/);
-const failCtx    = (require as any).context('../../assets/animation', false, /-fail\.lottie$/);
+const SUCCESS: any[] = [
+  require('../../assets/animation/avocado-success.lottie'),
+  require('../../assets/animation/cat-success.lottie'),
+  require('../../assets/animation/dancecat-success.lottie'),
+  require('../../assets/animation/owl-success.lottie'),
+  require('../../assets/animation/trampoline-success.lottie'),
+  require('../../assets/animation/yayjump-success.lottie'),
+];
 
-const SUCCESS: any[] = successCtx.keys().map((k: string) => successCtx(k));
-const FAIL: any[]    = failCtx.keys().map((k: string) => failCtx(k));
+const FAIL: any[] = [
+  require('../../assets/animation/cat-fail.lottie'),
+  require('../../assets/animation/cat2-fail.lottie'),
+  require('../../assets/animation/monster-fail.lottie'),
+];
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];

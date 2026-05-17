@@ -107,8 +107,8 @@ export default function MemoryMatch() {
 
   const cardSize = gridSize.w > 0
     ? Math.floor(Math.min(
-        (gridSize.w - Spacing.sm * (COLS - 1)) / COLS,
-        (gridSize.h - Spacing.sm * (ROWS - 1)) / ROWS,
+        (gridSize.w - Spacing.lg * 2 - Spacing.sm * (COLS - 1)) / COLS,
+        (gridSize.h - Spacing.xs * 2 - Spacing.sm * (ROWS - 1)) / ROWS,
       ))
     : 80;
 
