@@ -1,22 +1,22 @@
 import { Audio } from 'expo-av';
 import { useCallback, useEffect, useRef } from 'react';
 
-// ─── Praise / mistake audio (require.context, like animations) ────────────────
-// Drop any *-success.wav or *-fail.wav into assets/audio/praises/ — no code changes needed.
-const successCtx = (require as any).context('../../assets/audio/praises', false, /-success\.(wav|mp3)$/);
-const failCtx    = (require as any).context('../../assets/audio/praises', false, /-fail\.(wav|mp3)$/);
-
-const SUCCESS_SOUNDS: number[] = successCtx.keys().map((k: string) => successCtx(k));
-const FAIL_SOUNDS: number[]    = failCtx.keys().map((k: string) => failCtx(k));
+// ─── Praise / mistake audio ───────────────────────────────────────────────────
+// require.context is a web-only Metro/webpack feature — not available on native.
+let SUCCESS_SOUNDS: number[] = [];
+let FAIL_SOUNDS: number[]    = [];
+try {
+  const successCtx = (require as any).context('../../assets/audio/praises', false, /-success\.(wav|mp3)$/);
+  const failCtx    = (require as any).context('../../assets/audio/praises', false, /-fail\.(wav|mp3)$/);
+  SUCCESS_SOUNDS = successCtx.keys().map((k: string) => successCtx(k));
+  FAIL_SOUNDS    = failCtx.keys().map((k: string) => failCtx(k));
+} catch {}
 
 function pickRandom<T>(arr: T[]): T | null {
   return arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
 }
 
-// Converts Albanian text to the audio filename stem (no extension).
-// ë → w  |  ç → c  |  spaces → hyphens  |  lowercase  |  no punctuation
-// Drop a file into public/audio/words/ or public/audio/sentences/ and it is
-// picked up automatically — no registration needed.
+// ë → w  |  ç → c  |  spaces → hyphens  |  lowercase  |  strip punctuation
 export function normalizeAudioKey(text: string): string {
   return text
     .toLowerCase()
@@ -44,23 +44,23 @@ function englishCandidates(key: string): string[] {
 }
 
 // ─── Web audio via HTML Audio API ────────────────────────────────────────────
-// expo-av's createAsync doesn't reliably throw on a 404, so playAsync() then
-// fails silently. The HTML Audio API handles missing files correctly via onerror.
+const isWeb = typeof window !== 'undefined' && typeof (window as any).Audio === 'function';
 
-let _webAudio: HTMLAudioElement | null = null;
+let _webAudio: any = null;
 
 function stopWebAudio() {
   if (_webAudio) { _webAudio.pause(); _webAudio.src = ''; _webAudio = null; }
 }
 
 function speakWeb(candidates: string[], rate: number, onEnd?: () => void): void {
+  if (!isWeb) { onEnd?.(); return; }
   stopWebAudio();
   let idx = 0;
 
   const tryNext = () => {
     if (idx >= candidates.length) { onEnd?.(); return; }
     const uri = candidates[idx++];
-    const audio = new (window as any).Audio(uri) as HTMLAudioElement;
+    const audio = new (window as any).Audio(uri);
     _webAudio = audio;
     audio.onerror  = () => { if (_webAudio === audio) { _webAudio = null; tryNext(); } };
     audio.onended  = () => { if (_webAudio === audio) { _webAudio = null; onEnd?.(); } };
@@ -71,13 +71,11 @@ function speakWeb(candidates: string[], rate: number, onEnd?: () => void): void 
   tryNext();
 }
 
-// ─── Pre-gesture queue ───────────────────────────────────────────────────────
-// Browsers block audio until the user interacts. We queue the first speak call
-// and fire it synchronously on the first pointer/key event.
+// ─── Pre-gesture unlock queue (web only) ─────────────────────────────────────
 let _unlocked = false;
 let _pendingSpeak: (() => void) | null = null;
 
-if (typeof window !== 'undefined') {
+if (isWeb && typeof window.addEventListener === 'function') {
   const unlock = () => {
     _unlocked = true;
     const fn = _pendingSpeak;
@@ -86,6 +84,9 @@ if (typeof window !== 'undefined') {
   };
   window.addEventListener('pointerdown', unlock, { once: true });
   window.addEventListener('keydown',     unlock, { once: true });
+} else {
+  // On native there's no gesture gate — audio can play immediately.
+  _unlocked = true;
 }
 
 // ─── expo-av asset playback (for praises / mistakes) ────────────────────────
@@ -118,11 +119,8 @@ export function useSpeech() {
       if (!isMounted.current) return;
       speakWeb(wordCandidates(normalizeAudioKey(text)), rate, onEnd);
     };
-    if (_unlocked) {
-      doSpeak();
-    } else {
-      _pendingSpeak = doSpeak;
-    }
+    if (_unlocked) doSpeak();
+    else _pendingSpeak = doSpeak;
   }, [stop]);
 
   const speakSlow = useCallback((text: string) => speak(text, 0.65), [speak]);
