@@ -1,14 +1,16 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
-import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
-import { MATH_CONFIG, NumberItem, getNumber, getWrongAnswers } from '../../src/data/numbers';
+import { MATH_CONFIG, getNumber, getWrongAnswers } from '../../src/data/numbers';
 import { VOCABULARY } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
+import { useProgress } from '../../src/hooks/useProgress';
+import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
 const ROUNDS = 6;
@@ -45,6 +47,7 @@ const gridStyles = StyleSheet.create({
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function NumberChoice({ n, state, onPress }: { n: number; state: 'idle' | 'correct' | 'wrong'; onPress: () => void }) {
+  const colors = useColors();
   const scale = useRef(new Animated.Value(1)).current;
   const shakeX = useRef(new Animated.Value(0)).current;
 
@@ -64,27 +67,38 @@ function NumberChoice({ n, state, onPress }: { n: number; state: 'idle' | 'corre
   }, [state]);
 
   const animStyle = { transform: [{ scale }, { translateX: shakeX }] };
-
   const numberItem = getNumber(n);
-  const bg = state === 'correct' ? Colors.successLight : state === 'wrong' ? Colors.errorLight : Colors.surface;
-  const border = state === 'correct' ? Colors.success : state === 'wrong' ? Colors.error : Colors.border;
+  const bg = state === 'correct' ? colors.successLight : state === 'wrong' ? colors.errorLight : colors.surface;
+  const border = state === 'correct' ? colors.success : state === 'wrong' ? colors.error : colors.border;
 
   return (
     <AnimatedPressable
       onPress={onPress}
       disabled={state !== 'idle'}
-      style={[styles.choice, animStyle, { backgroundColor: bg, borderColor: border }]}
+      style={[choiceStyle.tile, animStyle, { backgroundColor: bg, borderColor: border }]}
       accessibilityLabel={String(n)}
     >
-      <Text style={[styles.numeral, state === 'correct' && { color: Colors.success }]}>{n}</Text>
-      {numberItem && <Text style={[styles.albanianNum, state === 'correct' && { color: Colors.success }]}>{numberItem.albanian}</Text>}
+      <Text style={[choiceStyle.numeral, state === 'correct' && { color: colors.success }]}>{n}</Text>
+      {numberItem && <Text style={[choiceStyle.albanianNum, state === 'correct' && { color: colors.success }]}>{numberItem.albanian}</Text>}
     </AnimatedPressable>
   );
 }
 
+const choiceStyle = StyleSheet.create({
+  tile: {
+    width: '44%', paddingVertical: Spacing.lg, borderRadius: Radii.xl,
+    borderWidth: 3, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 3,
+  },
+  numeral: { fontSize: FontSizes.xxl, fontWeight: '900' },
+  albanianNum: { fontSize: FontSizes.sm, fontWeight: '600', marginTop: 2 },
+});
+
 function Summary({ score, total, onReplay, onHome, name }: {
   score: number; total: number; onReplay: () => void; onHome: () => void; name?: string;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const stars = score >= total ? 3 : score >= Math.ceil(total * 0.7) ? 2 : 1;
   return (
     <View style={styles.summary}>
@@ -92,10 +106,10 @@ function Summary({ score, total, onReplay, onHome, name }: {
       <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
       <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.secondary }]} onPress={onReplay}>
+      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
         <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
       </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
+      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
         <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
       </Pressable>
     </View>
@@ -106,6 +120,9 @@ export default function CountMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
+  const { recordStars } = useProgress();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [game, setGame] = useState<CountRound[]>(() => buildGame());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -122,7 +139,10 @@ export default function CountMatch() {
   }, [roundIdx, game]);
 
   useEffect(() => {
-    if (done) praise();
+    if (!done) return;
+    praise();
+    const stars = score >= ROUNDS ? 3 : score >= Math.ceil(ROUNDS * 0.7) ? 2 : 1;
+    recordStars('count-match', stars);
   }, [done]);
 
   useEffect(() => () => stop(), []);
@@ -192,43 +212,37 @@ export default function CountMatch() {
           <NumberChoice key={n} n={n} onPress={() => handleChoice(n)} state={choiceStates[n] ?? 'idle'} />
         ))}
       </View>
-
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
-  },
-  backBtn: { padding: Spacing.sm },
-  backText: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '600' },
-  progress: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '700' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
-  dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: Colors.border },
-  dotActive: { backgroundColor: Colors.young },
-  countCard: {
-    marginHorizontal: Spacing.xl, marginTop: Spacing.sm,
-    backgroundColor: Colors.youngLight, borderRadius: Radii.xl,
-    minHeight: 160, justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3,
-  },
-  instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text, marginTop: Spacing.lg },
-  instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: Colors.textLight, marginBottom: Spacing.md },
-  choicesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg },
-  choice: {
-    width: '44%', paddingVertical: Spacing.lg, borderRadius: Radii.xl,
-    borderWidth: 3, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 3,
-  },
-  numeral: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text },
-  albanianNum: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.textLight, marginTop: 2 },
-  summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-  summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-  summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-  summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    topBar: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
+    },
+    backBtn: { padding: Spacing.sm },
+    backText: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '600' },
+    progress: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '700' },
+    dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
+    dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: colors.border },
+    dotActive: { backgroundColor: colors.young },
+    countCard: {
+      marginHorizontal: Spacing.xl, marginTop: Spacing.sm,
+      backgroundColor: colors.youngLight, borderRadius: Radii.xl,
+      minHeight: 160, justifyContent: 'center', alignItems: 'center',
+      shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3,
+    },
+    instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: colors.text, marginTop: Spacing.lg },
+    instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginBottom: Spacing.md },
+    choicesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg },
+    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
+    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
+    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
+    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
+  });
+}

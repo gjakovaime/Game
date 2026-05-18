@@ -1,4 +1,4 @@
-export const Colors = {
+export const DarkColors = {
   primary:        '#E8445A',
   primaryDark:    '#C73650',
   secondary:      '#4ECDC4',
@@ -28,6 +28,42 @@ export const Colors = {
   starEmpty:  '#2D3866',
   avatarBg:   '#1E2B5C',
 };
+
+export const LightColors = {
+  primary:        '#E8445A',
+  primaryDark:    '#C73650',
+  secondary:      '#4ECDC4',
+  secondaryDark:  '#3BAFA7',
+  accent:         '#F5B800',
+
+  background:  '#F0F4FF',
+  surface:     '#FFFFFF',
+  border:      '#D8E0F5',
+
+  text:           '#0D1B3E',
+  textLight:      '#5A7298',
+  textOnPrimary:  '#FFFFFF',
+
+  success:       '#3DA552',
+  successLight:  '#D4F5D9',
+  error:         '#E03E3E',
+  errorLight:    '#FFE0E0',
+  warning:       '#F5B800',
+
+  young:       '#FF9F43',
+  youngLight:  '#FFF0DC',
+  older:       '#6B6FD4',
+  olderLight:  '#EEEEFF',
+
+  star:       '#F5B800',
+  starEmpty:  '#C8D2E8',
+  avatarBg:   '#E8EEFF',
+};
+
+export type ColorPalette = typeof DarkColors;
+
+// Static fallback kept so any file that hasn't been migrated still compiles.
+export const Colors = DarkColors;
 
 export const FontSizes = {
   xs: 12,

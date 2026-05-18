@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Colors, FontSizes, Radii, Spacing } from '../constants/colors';
+import { ColorPalette, FontSizes, Radii, Spacing } from '../constants/colors';
+import { useColors } from '../hooks/useTheme';
 
 type Props = {
   title: string;
@@ -18,6 +19,8 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function GameCard({ title, subtitle, emoji, bgColor, accentColor, route, locked, lockedMessage }: Props) {
   const router = useRouter();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const scale = useRef(new Animated.Value(1)).current;
   const animStyle = { transform: [{ scale }] };
 
@@ -53,51 +56,29 @@ export function GameCard({ title, subtitle, emoji, bgColor, accentColor, route, 
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: Radii.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  emoji: {
-    fontSize: 52,
-    marginRight: Spacing.md,
-  },
-  text: {
-    flex: 1,
-  },
-  title: {
-    fontSize: FontSizes.lg,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: FontSizes.sm,
-    color: Colors.textLight,
-    lineHeight: 18,
-  },
-  lock: {
-    fontSize: FontSizes.xl,
-    marginLeft: Spacing.sm,
-  },
-  arrow: {
-    width: 36,
-    height: 36,
-    borderRadius: Radii.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: Spacing.sm,
-  },
-  arrowText: {
-    color: Colors.textOnPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: Radii.xl,
+      padding: Spacing.lg,
+      marginBottom: Spacing.md,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    emoji: { fontSize: 52, marginRight: Spacing.md },
+    text: { flex: 1 },
+    title: { fontSize: FontSizes.lg, fontWeight: '800', marginBottom: 4 },
+    subtitle: { fontSize: FontSizes.sm, color: colors.textLight, lineHeight: 18 },
+    lock: { fontSize: FontSizes.xl, marginLeft: Spacing.sm },
+    arrow: {
+      width: 36, height: 36, borderRadius: Radii.full,
+      justifyContent: 'center', alignItems: 'center', marginLeft: Spacing.sm,
+    },
+    arrowText: { color: colors.textOnPrimary, fontSize: 14, fontWeight: '700' },
+  });
+}

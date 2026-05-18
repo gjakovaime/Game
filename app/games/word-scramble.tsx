@@ -1,13 +1,16 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
-import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { SummaryCelebration } from '../../src/components/SummaryCelebration';
+import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCABULARY, VocabItem } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
+import { useProgress } from '../../src/hooks/useProgress';
+import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
 const ROUNDS = 5;
@@ -40,6 +43,7 @@ function buildItems(): VocabItem[] {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function LetterTile({ letter, variant, onPress }: { letter: Letter; variant: 'pool' | 'placed'; onPress: () => void }) {
+  const colors = useColors();
   const scale = useRef(new Animated.Value(1)).current;
   const animStyle = { transform: [{ scale }] };
   return (
@@ -47,13 +51,22 @@ function LetterTile({ letter, variant, onPress }: { letter: Letter; variant: 'po
       onPress={onPress}
       onPressIn={() => { Animated.spring(scale, { toValue: 0.88, damping: 15, useNativeDriver: true }).start(); }}
       onPressOut={() => { Animated.spring(scale, { toValue: 1, damping: 15, useNativeDriver: true }).start(); }}
-      style={[styles.letterTile, animStyle, { backgroundColor: variant === 'pool' ? Colors.older : Colors.secondary }]}
+      style={[tileStyles.letterTile, animStyle, { backgroundColor: variant === 'pool' ? colors.older : colors.secondary }]}
       accessibilityLabel={letter.char}
     >
-      <Text style={styles.letterChar}>{letter.char.toUpperCase()}</Text>
+      <Text style={tileStyles.letterChar}>{letter.char.toUpperCase()}</Text>
     </AnimatedPressable>
   );
 }
+
+const tileStyles = StyleSheet.create({
+  letterTile: {
+    width: 46, height: 46, borderRadius: Radii.md,
+    justifyContent: 'center', alignItems: 'center', margin: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 3,
+  },
+  letterChar: { fontSize: FontSizes.lg, fontWeight: '900', color: '#FFFFFF' },
+});
 
 function PlacedRow({ letters, onRemove, shaking }: { letters: Letter[]; onRemove: (letter: Letter) => void; shaking: boolean }) {
   const shakeX = useRef(new Animated.Value(0)).current;
@@ -70,7 +83,7 @@ function PlacedRow({ letters, onRemove, shaking }: { letters: Letter[]; onRemove
   }, [shaking]);
   const animStyle = { transform: [{ translateX: shakeX }] };
   return (
-    <Animated.View style={[styles.placedRow, animStyle]}>
+    <Animated.View style={[rowStyles.placedRow, animStyle]}>
       {letters.map(l => (
         <LetterTile key={l.id} letter={l} variant="placed" onPress={() => onRemove(l)} />
       ))}
@@ -78,29 +91,52 @@ function PlacedRow({ letters, onRemove, shaking }: { letters: Letter[]; onRemove
   );
 }
 
+const rowStyles = StyleSheet.create({
+  placedRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', padding: Spacing.xs },
+});
+
 function Summary({ score, total, onReplay, onHome, name }: {
   score: number; total: number; onReplay: () => void; onHome: () => void; name?: string;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeSumStyles(colors), [colors]);
   const stars = score >= total ? 3 : score >= Math.ceil(total * 0.6) ? 2 : 1;
+  const { recordStars } = useProgress();
+  useEffect(() => { recordStars('word-scramble', stars); }, []);
+
   return (
-    <View style={styles.summary}>
-      <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
-      <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.secondary }]} onPress={onReplay}>
+    <View style={styles.wrap}>
+      <SummaryCelebration />
+      <Text style={styles.title}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
+      <Text style={styles.stars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
+      <Text style={styles.score}>{score}/{total} saktë!</Text>
+      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
         <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
       </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
+      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
         <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
       </Pressable>
     </View>
   );
 }
 
+function makeSumStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    wrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    title: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
+    stars: { fontSize: 48, marginBottom: Spacing.md },
+    score: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
+    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
+  });
+}
+
 export default function WordScramble() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [items, setItems] = useState<VocabItem[]>(() => buildItems());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -108,11 +144,11 @@ export default function WordScramble() {
   const [placed, setPlaced] = useState<Letter[]>([]);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const [showBurst, setShowBurst] = useState(false);
   const [showFail, setShowFail] = useState(false);
   const [shaking, setShaking] = useState(false);
-  const advanceGame = useRef<(() => void) | null>(null);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locked = useRef(false);
 
   const currentItem = items[roundIdx];
 
@@ -122,9 +158,17 @@ export default function WordScramble() {
     setPool(scramble(letters));
     setPlaced([]);
     setShaking(false);
+    locked.current = false;
     speak(currentItem.albanian);
-    return () => { if (failTimer.current) clearTimeout(failTimer.current); };
+    return () => {
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      if (failTimer.current) clearTimeout(failTimer.current);
+    };
   }, [roundIdx, items]);
+
+  useEffect(() => {
+    if (done) praise();
+  }, [done]);
 
   useEffect(() => () => stop(), []);
 
@@ -139,24 +183,24 @@ export default function WordScramble() {
   }, []);
 
   const handleCheck = useCallback(() => {
-    if (!currentItem) return;
+    if (!currentItem || locked.current) return;
     const attempt = placed.map(l => l.char).join('');
     if (attempt === currentItem.albanian) {
+      locked.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       praise();
-      setShowBurst(true);
       setScore(s => s + 1);
-      advanceGame.current = () => {
-        setShowBurst(false);
+      advanceTimer.current = setTimeout(() => {
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx(r => r + 1);
-      };
+        locked.current = false;
+      }, 800);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
       setShowFail(true);
-      failTimer.current = setTimeout(() => setShowFail(false), 1400);
       setShaking(true);
+      failTimer.current = setTimeout(() => setShowFail(false), 1400);
       setTimeout(() => {
         setShaking(false);
         const letters = makeLetters(currentItem.albanian);
@@ -164,16 +208,18 @@ export default function WordScramble() {
         setPlaced([]);
       }, 650);
     }
-  }, [placed, currentItem, roundIdx, activeProfile]);
+  }, [placed, currentItem, roundIdx]);
 
   function handleReplay() {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    if (failTimer.current) clearTimeout(failTimer.current);
     setItems(buildItems());
     setRoundIdx(0);
     setScore(0);
     setDone(false);
-    setShowBurst(false);
     setShowFail(false);
     setShaking(false);
+    locked.current = false;
   }
 
   if (done) {
@@ -211,7 +257,6 @@ export default function WordScramble() {
       <Text style={styles.instruction}>Shkruaj fjalën! 👆</Text>
       <Text style={styles.instructionEn}>(Spell the word by tapping the letters!)</Text>
 
-      {/* Placed letters tray */}
       <View style={styles.placedWrap}>
         {placed.length > 0
           ? <PlacedRow letters={placed} onRemove={tapFromPlaced} shaking={shaking} />
@@ -219,7 +264,6 @@ export default function WordScramble() {
         }
       </View>
 
-      {/* Pool letters */}
       <View style={styles.poolRow}>
         {pool.map(l => (
           <LetterTile key={l.id} letter={l} variant="pool" onPress={() => tapFromPool(l)} />
@@ -233,68 +277,56 @@ export default function WordScramble() {
           style={[styles.checkBtn, !allPlaced && styles.checkBtnDisabled]}
           accessibilityRole="button"
         >
-          <Text style={styles.checkBtnText}>Kontrollo! ✅</Text>
+          <Text style={styles.checkBtnText}>Kontrolloje!</Text>
         </Pressable>
       </View>
 
-      <FeedbackAnimation type="success" visible={showBurst} onComplete={() => advanceGame.current?.()} />
       <FeedbackAnimation type="fail" visible={showFail} />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
-  },
-  backBtn: { padding: Spacing.sm },
-  backText: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '600' },
-  progress: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '700' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
-  dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: Colors.border },
-  dotActive: { backgroundColor: Colors.older },
-  emojiCard: {
-    alignItems: 'center', marginTop: Spacing.sm,
-    backgroundColor: Colors.olderLight, marginHorizontal: Spacing.xl,
-    borderRadius: Radii.xl, paddingVertical: Spacing.lg,
-  },
-  hintEmoji: { fontSize: FontSizes.huge },
-  speakerBtn: { marginTop: Spacing.sm, padding: Spacing.xs },
-  speakerIcon: { fontSize: FontSizes.xl },
-  instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text, marginTop: Spacing.lg },
-  instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: Colors.textLight, marginBottom: Spacing.md },
-  placedWrap: {
-    minHeight: 64, justifyContent: 'center', alignItems: 'center',
-    marginHorizontal: Spacing.xl, marginBottom: Spacing.sm,
-    borderWidth: 2, borderRadius: Radii.lg, borderColor: Colors.border,
-    borderStyle: 'dashed', backgroundColor: Colors.surface,
-  },
-  placedRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', padding: Spacing.xs },
-  placedPlaceholder: { fontSize: FontSizes.xl, color: Colors.border, letterSpacing: 8, fontWeight: '700' },
-  poolRow: {
-    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
-    paddingHorizontal: Spacing.lg, minHeight: 70,
-  },
-  letterTile: {
-    width: 46, height: 46, borderRadius: Radii.md,
-    justifyContent: 'center', alignItems: 'center', margin: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 3,
-  },
-  letterChar: { fontSize: FontSizes.lg, fontWeight: '900', color: Colors.textOnPrimary },
-  checkWrap: { paddingHorizontal: Spacing.xl, marginTop: Spacing.lg },
-  checkBtn: {
-    backgroundColor: Colors.older, borderRadius: Radii.full,
-    paddingVertical: Spacing.md, alignItems: 'center',
-    shadowColor: Colors.older, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
-  },
-  checkBtnDisabled: { opacity: 0.35 },
-  checkBtnText: { color: Colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.lg },
-  summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-  summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-  summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-  summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    topBar: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
+    },
+    backBtn: { padding: Spacing.sm },
+    backText: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '600' },
+    progress: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '700' },
+    dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
+    dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: colors.border },
+    dotActive: { backgroundColor: colors.older },
+    emojiCard: {
+      alignItems: 'center', marginTop: Spacing.sm,
+      backgroundColor: colors.olderLight, marginHorizontal: Spacing.xl,
+      borderRadius: Radii.xl, paddingVertical: Spacing.lg,
+    },
+    hintEmoji: { fontSize: FontSizes.huge },
+    speakerBtn: { marginTop: Spacing.sm, padding: Spacing.xs },
+    speakerIcon: { fontSize: FontSizes.xl },
+    instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: colors.text, marginTop: Spacing.lg },
+    instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginBottom: Spacing.md },
+    placedWrap: {
+      minHeight: 64, justifyContent: 'center', alignItems: 'center',
+      marginHorizontal: Spacing.xl, marginBottom: Spacing.sm,
+      borderWidth: 2, borderRadius: Radii.lg, borderColor: colors.border,
+      borderStyle: 'dashed', backgroundColor: colors.surface,
+    },
+    placedPlaceholder: { fontSize: FontSizes.xl, color: colors.border, letterSpacing: 8, fontWeight: '700' },
+    poolRow: {
+      flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
+      paddingHorizontal: Spacing.lg, minHeight: 70,
+    },
+    checkWrap: { paddingHorizontal: Spacing.xl, marginTop: Spacing.lg },
+    checkBtn: {
+      backgroundColor: colors.older, borderRadius: Radii.full,
+      paddingVertical: Spacing.md, alignItems: 'center',
+      shadowColor: colors.older, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
+    },
+    checkBtnDisabled: { opacity: 0.35 },
+    checkBtnText: { color: colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.lg },
+  });
+}

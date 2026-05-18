@@ -27,7 +27,7 @@ export const VOCABULARY: VocabItem[] = [
   { id: 'cherry', albanian: 'qershia', english: 'cherry', emoji: '🍒', category: 'fruit' },
 //  new entries
   { id: 'akullore', albanian: 'akullore', english: 'ice cream', emoji: '🍦', category: 'fruit' },
-  { id: 'speca', albanian: 'speca', english: 'peppers', emoji: '🌶️🫑', category: 'fruit' },
+  { id: 'speca', albanian: 'speci', english: 'peppers', emoji: '🫑', category: 'fruit' },
   { id: 'pilaf', albanian: 'pilaf', english: 'rice', emoji: '🍚', category: 'fruit' },
   
 

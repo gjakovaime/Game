@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -14,10 +14,12 @@ import { SceneIllustration } from '../../src/components/SceneIllustration';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { WordTile } from '../../src/components/WordTile';
-import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { Sentence, getRandomSentences } from '../../src/data/sentences';
 import { useProfile } from '../../src/hooks/useProfile';
+import { useProgress } from '../../src/hooks/useProgress';
+import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
 const ROUNDS = 5;
@@ -25,12 +27,14 @@ const ROUNDS = 5;
 // ─── Instructions modal ───────────────────────────────────────────────────────
 
 function InstructionsModal({ visible, onDismiss }: { visible: boolean; onDismiss: () => void }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeIStyles(colors), [colors]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
-      <View style={iStyles.overlay}>
-        <View style={iStyles.card}>
-          <Text style={iStyles.header}>Si luhet? 🤔</Text>
-          <Text style={iStyles.subEn}>(How do you play?)</Text>
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          <Text style={styles.header}>Si luhet? 🤔</Text>
+          <Text style={styles.subEn}>(How do you play?)</Text>
 
           {[
             { emoji: '👀', albanian: 'Shiko foton!', english: 'Look at the picture!' },
@@ -38,18 +42,18 @@ function InstructionsModal({ visible, onDismiss }: { visible: boolean; onDismiss
             { emoji: '🧩', albanian: 'Bëni fjalinë!', english: 'Make the sentence!' },
             { emoji: '⭐', albanian: 'Kontrollo dhe shih!', english: 'Check and see!' },
           ].map((step, i) => (
-            <View key={i} style={iStyles.step}>
-              <Text style={iStyles.stepNum}>{i + 1}</Text>
-              <Text style={iStyles.stepEmoji}>{step.emoji}</Text>
-              <View style={iStyles.stepText}>
-                <Text style={iStyles.stepAlb}>{step.albanian}</Text>
-                <Text style={iStyles.stepEn}>{step.english}</Text>
+            <View key={i} style={styles.step}>
+              <Text style={styles.stepNum}>{i + 1}</Text>
+              <Text style={styles.stepEmoji}>{step.emoji}</Text>
+              <View style={styles.stepText}>
+                <Text style={styles.stepAlb}>{step.albanian}</Text>
+                <Text style={styles.stepEn}>{step.english}</Text>
               </View>
             </View>
           ))}
 
-          <Pressable style={iStyles.btn} onPress={onDismiss}>
-            <Text style={iStyles.btnText}>Hajde! 🚀</Text>
+          <Pressable style={styles.btn} onPress={onDismiss}>
+            <Text style={styles.btnText}>Hajde! 🚀</Text>
           </Pressable>
         </View>
       </View>
@@ -57,28 +61,30 @@ function InstructionsModal({ visible, onDismiss }: { visible: boolean; onDismiss
   );
 }
 
-const iStyles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
-  card: { backgroundColor: Colors.surface, borderRadius: Radii.xl, padding: Spacing.xl, width: '100%', maxWidth: 420 },
-  header: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, textAlign: 'center', marginBottom: 2 },
-  subEn: { fontSize: FontSizes.sm, color: Colors.textLight, textAlign: 'center', marginBottom: Spacing.lg },
-  step: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
-  stepNum: {
-    width: 28, height: 28, borderRadius: Radii.full,
-    backgroundColor: Colors.older, color: Colors.textOnPrimary,
-    textAlign: 'center', lineHeight: 28, fontWeight: '900', fontSize: FontSizes.sm,
-    marginRight: Spacing.sm,
-  },
-  stepEmoji: { fontSize: 28, marginRight: Spacing.sm },
-  stepText: { flex: 1 },
-  stepAlb: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.text },
-  stepEn: { fontSize: FontSizes.xs, color: Colors.textLight },
-  btn: {
-    ...buttonGloss, backgroundColor: Colors.older, borderRadius: Radii.full,
-    paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.md,
-  },
-  btnText: { color: Colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.lg },
-});
+function makeIStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
+    card: { backgroundColor: colors.surface, borderRadius: Radii.xl, padding: Spacing.xl, width: '100%', maxWidth: 420 },
+    header: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, textAlign: 'center', marginBottom: 2 },
+    subEn: { fontSize: FontSizes.sm, color: colors.textLight, textAlign: 'center', marginBottom: Spacing.lg },
+    step: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
+    stepNum: {
+      width: 28, height: 28, borderRadius: Radii.full,
+      backgroundColor: colors.older, color: colors.textOnPrimary,
+      textAlign: 'center', lineHeight: 28, fontWeight: '900', fontSize: FontSizes.sm,
+      marginRight: Spacing.sm,
+    },
+    stepEmoji: { fontSize: 28, marginRight: Spacing.sm },
+    stepText: { flex: 1 },
+    stepAlb: { fontSize: FontSizes.md, fontWeight: '700', color: colors.text },
+    stepEn: { fontSize: FontSizes.xs, color: colors.textLight },
+    btn: {
+      ...buttonGloss, backgroundColor: colors.older, borderRadius: Radii.full,
+      paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.md,
+    },
+    btnText: { color: colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.lg },
+  });
+}
 
 // ─── Answer tray ──────────────────────────────────────────────────────────────
 
@@ -90,14 +96,16 @@ type TrayProps = {
 };
 
 function AnswerTray({ placed, totalSlots, onRemove, flashColor }: TrayProps) {
-  const [trayBorderColor, setTrayBorderColor] = useState(Colors.border);
+  const colors = useColors();
+  const trayStyles = useMemo(() => makeTrayStyles(colors), [colors]);
+  const [trayBorderColor, setTrayBorderColor] = useState(colors.border);
 
   useEffect(() => {
     if (!flashColor) return;
     setTrayBorderColor(flashColor);
-    const t = setTimeout(() => setTrayBorderColor(Colors.border), 700);
+    const t = setTimeout(() => setTrayBorderColor(colors.border), 700);
     return () => clearTimeout(t);
-  }, [flashColor]);
+  }, [flashColor, colors.border]);
 
   return (
     <View style={[trayStyles.tray, { borderColor: trayBorderColor }]}>
@@ -115,18 +123,20 @@ function AnswerTray({ placed, totalSlots, onRemove, flashColor }: TrayProps) {
   );
 }
 
-const trayStyles = StyleSheet.create({
-  tray: {
-    borderWidth: 2,
-    borderRadius: Radii.lg,
-    minHeight: 56,
-    paddingVertical: Spacing.xs,
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.surface,
-  },
-  scroll: { paddingHorizontal: Spacing.sm, alignItems: 'center', flexGrow: 1, justifyContent: 'center' },
-});
+function makeTrayStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    tray: {
+      borderWidth: 2,
+      borderRadius: Radii.lg,
+      minHeight: 56,
+      paddingVertical: Spacing.xs,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+      backgroundColor: colors.surface,
+    },
+    scroll: { paddingHorizontal: Spacing.sm, alignItems: 'center', flexGrow: 1, justifyContent: 'center' },
+  });
+}
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
@@ -136,31 +146,35 @@ function Summary({
   score: number; total: number; firstAttemptCount: number;
   onReplay: () => void; onHome: () => void; profileName?: string;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeSumStyles(colors), [colors]);
   const stars = firstAttemptCount >= total ? 3 : firstAttemptCount >= total * 0.6 ? 2 : 1;
   return (
-    <View style={sumStyles.wrap}>
+    <View style={styles.wrap}>
       <SummaryCelebration />
-      <Text style={sumStyles.title}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>
-      <Text style={sumStyles.stars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={sumStyles.score}>{score}/{total} herë saktë!</Text>
-      <Pressable style={[sumStyles.btn, { backgroundColor: Colors.secondary }]} onPress={onReplay}>
-        <Text style={sumStyles.btnText}>Luaj përsëri! 🔄</Text>
+      <Text style={styles.title}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>
+      <Text style={styles.stars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
+      <Text style={styles.score}>{score}/{total} herë saktë!</Text>
+      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
+        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
       </Pressable>
-      <Pressable style={[sumStyles.btn, { backgroundColor: Colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={sumStyles.btnText}>Shko në shtëpi 🏠</Text>
+      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
+        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
       </Pressable>
     </View>
   );
 }
 
-const sumStyles = StyleSheet.create({
-  wrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-  title: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, textAlign: 'center', marginBottom: Spacing.md },
-  stars: { fontSize: 48, marginBottom: Spacing.md },
-  score: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
-});
+function makeSumStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    wrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    title: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, textAlign: 'center', marginBottom: Spacing.md },
+    stars: { fontSize: 48, marginBottom: Spacing.md },
+    score: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
+    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
+  });
+}
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
@@ -168,6 +182,9 @@ export default function SentenceBuilder() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
+  const { recordStars } = useProgress();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [showInstructions, setShowInstructions] = useState(true);
   const [sentences, setSentences] = useState<Sentence[]>(() => getRandomSentences(ROUNDS));
@@ -206,7 +223,10 @@ export default function SentenceBuilder() {
   }, [roundIdx, sentences]);
 
   useEffect(() => {
-    if (done) praise();
+    if (!done) return;
+    praise();
+    const stars = firstAttemptCount >= ROUNDS ? 3 : firstAttemptCount >= ROUNDS * 0.6 ? 2 : 1;
+    recordStars('sentence-builder', stars);
   }, [done]);
 
   useEffect(() => { return () => { stop(); }; }, [stop]);
@@ -234,7 +254,7 @@ export default function SentenceBuilder() {
     if (isCorrect) {
       locked.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      setFlashColor(Colors.success);
+      setFlashColor(colors.success);
       setScore((s) => s + 1);
       if (isFirstAttempt) setFirstAttemptCount((c) => c + 1);
       speak(sentence.albanian, 0.8);
@@ -246,7 +266,7 @@ export default function SentenceBuilder() {
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
-      setFlashColor(Colors.error);
+      setFlashColor(colors.error);
       setShowFail(true);
       failTimer.current = setTimeout(() => setShowFail(false), 1400);
       setIsFirstAttempt(false);
@@ -257,7 +277,7 @@ export default function SentenceBuilder() {
         setFlashColor(null);
       }, 800);
     }
-  }, [placed, sentence, roundIdx, isFirstAttempt]);
+  }, [placed, sentence, roundIdx, isFirstAttempt, colors]);
 
   function handleReplay() {
     setSentences(getRandomSentences(ROUNDS));
@@ -288,7 +308,6 @@ export default function SentenceBuilder() {
     <SafeAreaView style={styles.safe}>
       <InstructionsModal visible={showInstructions} onDismiss={() => setShowInstructions(false)} />
 
-      {/* Top bar */}
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
           <Text style={styles.backText}>← Kthehu</Text>
@@ -299,7 +318,6 @@ export default function SentenceBuilder() {
         <Text style={styles.progress}>{roundIdx + 1} / {ROUNDS}</Text>
       </View>
 
-      {/* Progress dots */}
       <View style={styles.dots}>
         {Array.from({ length: ROUNDS }).map((_, i) => (
           <View key={i} style={[styles.dot, i <= roundIdx && styles.dotActive]} />
@@ -307,7 +325,6 @@ export default function SentenceBuilder() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Scene illustration */}
         <View style={styles.sceneWrap}>
           <SceneIllustration illustration={sentence.illustration} sentenceId={sentence.albanian} size="large" />
         </View>
@@ -315,7 +332,6 @@ export default function SentenceBuilder() {
         <Text style={styles.instruction}>Bëj fjalinë për foton! 👇</Text>
         <Text style={styles.instructionEn}>(Make the sentence for the picture!)</Text>
 
-        {/* Answer tray */}
         <AnswerTray
           placed={placed}
           totalSlots={sentence.albanian.split(' ').length}
@@ -323,14 +339,12 @@ export default function SentenceBuilder() {
           flashColor={flashColor}
         />
 
-        {/* Word pool */}
         <View style={styles.pool}>
           {pool.map((word, i) => (
             <WordTile key={`${word}-${i}`} word={word} onPress={() => tapFromPool(word, i)} variant="pool" />
           ))}
         </View>
 
-        {/* Check button */}
         <View style={styles.checkWrap}>
           <Pressable
             style={[styles.checkBtn, !allPlaced && styles.checkBtnDisabled]}
@@ -344,7 +358,6 @@ export default function SentenceBuilder() {
         </View>
       </ScrollView>
 
-      {/* Toast */}
       {toast && (
         <View style={styles.toast} pointerEvents="none">
           <Text style={styles.toastText}>{toast}</Text>
@@ -356,57 +369,59 @@ export default function SentenceBuilder() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  backBtn: { padding: Spacing.sm },
-  backText: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '600' },
-  helpBtn: { padding: Spacing.sm },
-  helpText: { fontSize: FontSizes.lg },
-  progress: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '700' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
-  dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: Colors.border },
-  dotActive: { backgroundColor: Colors.older },
-  scroll: { paddingBottom: Spacing.xxl },
-  sceneWrap: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
-  instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text, marginBottom: 2 },
-  instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: Colors.textLight, marginBottom: Spacing.md },
-  pool: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    minHeight: 70,
-  },
-  checkWrap: { paddingHorizontal: Spacing.xl, marginTop: Spacing.md },
-  checkBtn: {
-    backgroundColor: Colors.older,
-    borderRadius: Radii.full,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    shadowColor: Colors.older,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  checkBtnDisabled: { opacity: 0.35 },
-  checkBtnText: { color: Colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.lg },
-  toast: {
-    position: 'absolute',
-    bottom: 100,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    borderRadius: Radii.full,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-  },
-  toastText: { color: '#fff', fontWeight: '700', fontSize: FontSizes.md },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+    },
+    backBtn: { padding: Spacing.sm },
+    backText: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '600' },
+    helpBtn: { padding: Spacing.sm },
+    helpText: { fontSize: FontSizes.lg },
+    progress: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '700' },
+    dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
+    dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: colors.border },
+    dotActive: { backgroundColor: colors.older },
+    scroll: { paddingBottom: Spacing.xxl },
+    sceneWrap: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
+    instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: colors.text, marginBottom: 2 },
+    instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginBottom: Spacing.md },
+    pool: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      minHeight: 70,
+    },
+    checkWrap: { paddingHorizontal: Spacing.xl, marginTop: Spacing.md },
+    checkBtn: {
+      backgroundColor: colors.older,
+      borderRadius: Radii.full,
+      paddingVertical: Spacing.md,
+      alignItems: 'center',
+      shadowColor: colors.older,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    checkBtnDisabled: { opacity: 0.35 },
+    checkBtnText: { color: colors.textOnPrimary, fontWeight: '900', fontSize: FontSizes.lg },
+    toast: {
+      position: 'absolute',
+      bottom: 100,
+      alignSelf: 'center',
+      backgroundColor: 'rgba(0,0,0,0.75)',
+      borderRadius: Radii.full,
+      paddingHorizontal: Spacing.xl,
+      paddingVertical: Spacing.sm,
+    },
+    toastText: { color: '#fff', fontWeight: '700', fontSize: FontSizes.md },
+  });
+}

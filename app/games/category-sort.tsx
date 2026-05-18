@@ -1,13 +1,15 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
-import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCABULARY, VocabItem } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
+import { useProgress } from '../../src/hooks/useProgress';
+import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
 const TOTAL = 15;
@@ -28,6 +30,8 @@ function buildQueue(): VocabItem[] {
 function Summary({ score, total, onReplay, onHome, name }: {
   score: number; total: number; onReplay: () => void; onHome: () => void; name?: string;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const stars = score >= Math.ceil(total * 0.9) ? 3 : score >= Math.ceil(total * 0.6) ? 2 : 1;
   return (
     <View style={styles.summary}>
@@ -35,10 +39,10 @@ function Summary({ score, total, onReplay, onHome, name }: {
       <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
       <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.secondary }]} onPress={onReplay}>
+      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
         <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
       </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
+      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
         <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
       </Pressable>
     </View>
@@ -49,6 +53,9 @@ export default function CategorySort() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
+  const { recordStars } = useProgress();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [queue, setQueue] = useState<VocabItem[]>(() => buildQueue());
   const [idx, setIdx] = useState(0);
@@ -65,7 +72,10 @@ export default function CategorySort() {
   }, [idx, queue]);
 
   useEffect(() => {
-    if (done) praise();
+    if (!done) return;
+    praise();
+    const stars = score >= Math.ceil(TOTAL * 0.9) ? 3 : score >= Math.ceil(TOTAL * 0.6) ? 2 : 1;
+    recordStars('category-sort', stars);
   }, [done]);
 
   useEffect(() => () => stop(), []);
@@ -136,8 +146,8 @@ export default function CategorySort() {
       <View style={styles.catGrid}>
         {(Object.entries(CAT_META) as [CatId, typeof CAT_META[CatId]][]).map(([catId, meta]) => {
           const isFlashed = flash?.catId === catId;
-          const bg = isFlashed ? (flash!.ok ? Colors.successLight : Colors.errorLight) : `${meta.color}18`;
-          const border = isFlashed ? (flash!.ok ? Colors.success : Colors.error) : meta.color;
+          const bg = isFlashed ? (flash!.ok ? colors.successLight : colors.errorLight) : `${meta.color}18`;
+          const border = isFlashed ? (flash!.ok ? colors.success : colors.error) : meta.color;
           return (
             <Pressable
               key={catId}
@@ -151,47 +161,47 @@ export default function CategorySort() {
           );
         })}
       </View>
-
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
-  },
-  backBtn: { padding: Spacing.sm },
-  backText: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '600' },
-  progress: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '700' },
-  wordCard: {
-    marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
-    backgroundColor: Colors.surface, borderRadius: Radii.xl,
-    paddingVertical: Spacing.xl, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
-  },
-  itemEmoji: { fontSize: FontSizes.huge },
-  itemWord: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginTop: Spacing.sm },
-  speakerBtn: { marginTop: Spacing.sm, padding: Spacing.xs },
-  speakerIcon: { fontSize: FontSizes.xl },
-  instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text, marginTop: Spacing.lg },
-  instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: Colors.textLight, marginBottom: Spacing.md },
-  catGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
-    paddingHorizontal: Spacing.lg, gap: Spacing.md, marginTop: Spacing.sm,
-  },
-  catBtn: {
-    width: '45%', paddingVertical: Spacing.xl, borderRadius: Radii.xl,
-    borderWidth: 3, alignItems: 'center', justifyContent: 'center',
-  },
-  catBtnEmoji: { fontSize: 40 },
-  catBtnLabel: { fontSize: FontSizes.md, fontWeight: '800', marginTop: Spacing.sm },
-  // Summary
-  summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-  summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-  summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-  summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    topBar: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
+    },
+    backBtn: { padding: Spacing.sm },
+    backText: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '600' },
+    progress: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '700' },
+    wordCard: {
+      marginHorizontal: Spacing.xl, marginTop: Spacing.lg,
+      backgroundColor: colors.surface, borderRadius: Radii.xl,
+      paddingVertical: Spacing.xl, alignItems: 'center',
+      shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
+    },
+    itemEmoji: { fontSize: FontSizes.huge },
+    itemWord: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginTop: Spacing.sm },
+    speakerBtn: { marginTop: Spacing.sm, padding: Spacing.xs },
+    speakerIcon: { fontSize: FontSizes.xl },
+    instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: colors.text, marginTop: Spacing.lg },
+    instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginBottom: Spacing.md },
+    catGrid: {
+      flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
+      paddingHorizontal: Spacing.lg, gap: Spacing.md, marginTop: Spacing.sm,
+    },
+    catBtn: {
+      width: '45%', paddingVertical: Spacing.xl, borderRadius: Radii.xl,
+      borderWidth: 3, alignItems: 'center', justifyContent: 'center',
+    },
+    catBtnEmoji: { fontSize: 40 },
+    catBtnLabel: { fontSize: FontSizes.md, fontWeight: '800', marginTop: Spacing.sm },
+    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
+    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
+    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
+    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
+  });
+}

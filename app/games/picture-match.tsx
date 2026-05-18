@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Image,
@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
-import { Colors, FontSizes, Radii, Spacing } from '../../src/constants/colors';
+import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
 import { VocabItem, getDistractors, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
+import { useProgress } from '../../src/hooks/useProgress';
+import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
 const ROUNDS = 5;
@@ -36,19 +38,14 @@ function buildRound(item: VocabItem): RoundItem {
 }
 
 function buildGame(): RoundItem[] {
-  const items = getRandomItems(ROUNDS);
-  return items.map(buildRound);
+  return getRandomItems(ROUNDS).map(buildRound);
 }
 
-type TileProps = {
-  item: VocabItem;
-  onPress: () => void;
-  state: 'idle' | 'correct' | 'wrong';
-};
-
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const TILE_SIZE = 140;
 
-function ChoiceTile({ item, onPress, state }: TileProps) {
+function ChoiceTile({ item, onPress, state }: { item: VocabItem; onPress: () => void; state: 'idle' | 'correct' | 'wrong' }) {
+  const colors = useColors();
   const scale = useRef(new Animated.Value(1)).current;
   const shakeX = useRef(new Animated.Value(0)).current;
 
@@ -67,42 +64,41 @@ function ChoiceTile({ item, onPress, state }: TileProps) {
   }, [state]);
 
   const animStyle = { transform: [{ scale }, { translateX: shakeX }] };
-
-  const bgColor =
-    state === 'correct' ? Colors.successLight :
-    state === 'wrong' ? Colors.errorLight :
-    Colors.surface;
-
-  const borderColor =
-    state === 'correct' ? Colors.success :
-    state === 'wrong' ? Colors.error :
-    Colors.border;
+  const bgColor = state === 'correct' ? colors.successLight : state === 'wrong' ? colors.errorLight : colors.surface;
+  const borderColor = state === 'correct' ? colors.success : state === 'wrong' ? colors.error : colors.border;
 
   return (
     <AnimatedPressable
       onPress={onPress}
       disabled={state === 'correct'}
-      style={[styles.tile, animStyle, { backgroundColor: bgColor, borderColor }]}
+      style={[tileStyle.tile, animStyle, { backgroundColor: bgColor, borderColor }]}
       accessibilityRole="button"
       accessibilityLabel={item.english}
     >
       {VOCAB_IMAGES[item.id]
-        ? <Image source={VOCAB_IMAGES[item.id]} style={styles.tileImage} resizeMode="contain" accessibilityRole="image" />
-        : <Text style={styles.tileEmoji}>{item.emoji}</Text>
+        ? <Image source={VOCAB_IMAGES[item.id]} style={tileStyle.image} resizeMode="contain" accessibilityRole="image" />
+        : <Text style={tileStyle.emoji}>{item.emoji}</Text>
       }
     </AnimatedPressable>
   );
 }
 
-type SummaryProps = {
-  score: number;
-  total: number;
-  onReplay: () => void;
-  onHome: () => void;
-  profileName?: string;
-};
+const tileStyle = StyleSheet.create({
+  tile: {
+    width: TILE_SIZE, height: TILE_SIZE, borderRadius: Radii.xl,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 3,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1, shadowRadius: 6, elevation: 4,
+  },
+  emoji: { fontSize: 70 },
+  image: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
+});
 
-function Summary({ score, total, onReplay, onHome, profileName }: SummaryProps) {
+function Summary({ score, total, onReplay, onHome, profileName }: {
+  score: number; total: number; onReplay: () => void; onHome: () => void; profileName?: string;
+}) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const stars = score >= total ? 3 : score >= total * 0.6 ? 2 : 1;
   return (
     <View style={styles.summary}>
@@ -110,10 +106,10 @@ function Summary({ score, total, onReplay, onHome, profileName }: SummaryProps) 
       <Text style={styles.summaryTitle}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>
       <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
       <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.secondary }]} onPress={onReplay}>
+      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
         <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
       </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: Colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
+      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
         <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
       </Pressable>
     </View>
@@ -124,6 +120,9 @@ export default function PictureMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
+  const { recordStars } = useProgress();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [game, setGame] = useState<RoundItem[]>(() => buildGame());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -140,14 +139,15 @@ export default function PictureMatch() {
   }, [roundIdx, game]);
 
   useEffect(() => {
-    if (done) praise();
+    if (!done) return;
+    praise();
+    const stars = score >= ROUNDS ? 3 : score >= ROUNDS * 0.6 ? 2 : 1;
+    recordStars('picture-match', stars);
   }, [done]);
 
   useEffect(() => { return () => { stop(); }; }, [stop]);
 
-  function resetTiles() {
-    setTileStates({});
-  }
+  function resetTiles() { setTileStates({}); }
 
   const handleChoice = useCallback((item: VocabItem) => {
     if (tileStates[item.id]) return;
@@ -180,13 +180,7 @@ export default function PictureMatch() {
   if (done) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary
-          score={score}
-          total={ROUNDS}
-          onReplay={handleReplay}
-          onHome={() => router.replace('/home')}
-          profileName={activeProfile?.name}
-        />
+        <Summary score={score} total={ROUNDS} onReplay={handleReplay} onHome={() => router.replace('/home')} profileName={activeProfile?.name} />
       </SafeAreaView>
     );
   }
@@ -200,14 +194,12 @@ export default function PictureMatch() {
         <Text style={styles.progress}>{roundIdx + 1} / {ROUNDS}</Text>
       </View>
 
-      {/* Progress dots */}
       <View style={styles.dots}>
         {Array.from({ length: ROUNDS }).map((_, i) => (
           <View key={i} style={[styles.dot, i <= roundIdx && styles.dotActive]} />
         ))}
       </View>
 
-      {/* Word card */}
       <View style={styles.wordCard}>
         <Text style={styles.wordAlbanian}>{round.correct.albanian}</Text>
         <Pressable onPress={() => speak(round.correct.albanian)} style={styles.speakerBtn} accessibilityLabel="Hear the word">
@@ -218,83 +210,45 @@ export default function PictureMatch() {
       <Text style={styles.instruction}>Gjej foton e saktë! 👇</Text>
       <Text style={styles.instructionEn}>(Find the correct picture!)</Text>
 
-      {/* 2×2 grid */}
       <View style={styles.grid}>
         {round.choices.map((item) => (
-          <ChoiceTile
-            key={item.id}
-            item={item}
-            onPress={() => handleChoice(item)}
-            state={tileStates[item.id] ?? 'idle'}
-          />
+          <ChoiceTile key={item.id} item={item} onPress={() => handleChoice(item)} state={tileStates[item.id] ?? 'idle'} />
         ))}
       </View>
-
     </SafeAreaView>
   );
 }
 
-const TILE_SIZE = 140;
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  backBtn: { padding: Spacing.sm },
-  backText: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '600' },
-  progress: { fontSize: FontSizes.md, color: Colors.textLight, fontWeight: '700' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
-  dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: Colors.border },
-  dotActive: { backgroundColor: Colors.young },
-  wordCard: {
-    marginHorizontal: Spacing.xl,
-    backgroundColor: Colors.youngLight,
-    borderRadius: Radii.xl,
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-    alignItems: 'center',
-    marginTop: Spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.md,
-  },
-  wordAlbanian: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.young },
-  speakerBtn: { padding: Spacing.sm },
-  speakerIcon: { fontSize: FontSizes.xl },
-  instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.text, marginTop: Spacing.lg },
-  instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: Colors.textLight, marginBottom: Spacing.md },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-  },
-  tile: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
-    borderRadius: Radii.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  tileEmoji: { fontSize: 70 },
-  tileImage: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
-  // Summary
-  summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-  summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-  summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-  summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.textLight, marginBottom: Spacing.xxl },
-  btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  btnText: { color: Colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    topBar: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
+    },
+    backBtn: { padding: Spacing.sm },
+    backText: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '600' },
+    progress: { fontSize: FontSizes.md, color: colors.textLight, fontWeight: '700' },
+    dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginVertical: Spacing.sm },
+    dot: { width: 10, height: 10, borderRadius: Radii.full, backgroundColor: colors.border },
+    dotActive: { backgroundColor: colors.young },
+    wordCard: {
+      marginHorizontal: Spacing.xl, backgroundColor: colors.youngLight,
+      borderRadius: Radii.xl, paddingVertical: Spacing.xl, paddingHorizontal: Spacing.lg,
+      alignItems: 'center', marginTop: Spacing.md,
+      flexDirection: 'row', justifyContent: 'center', gap: Spacing.md,
+    },
+    wordAlbanian: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.young },
+    speakerBtn: { padding: Spacing.sm },
+    speakerIcon: { fontSize: FontSizes.xl },
+    instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: colors.text, marginTop: Spacing.lg },
+    instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginBottom: Spacing.md },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg },
+    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
+    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
+    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
+    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
+  });
+}

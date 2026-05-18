@@ -1,16 +1,17 @@
 import { Redirect } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { Colors } from '../src/constants/colors';
 import { useProfile } from '../src/hooks/useProfile';
+import { useColors } from '../src/hooks/useTheme';
 
 export default function Index() {
   const { activeProfile, loaded } = useProfile();
+  const colors = useColors();
 
   if (!loaded) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -19,10 +20,5 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-  },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
