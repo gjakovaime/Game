@@ -7,9 +7,10 @@ import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
-import { VOCABULARY, VocabItem } from '../../src/data/vocabulary';
+import { VocabItem, getAvailableVocab } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
+import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
@@ -33,8 +34,8 @@ function scramble(letters: Letter[]): Letter[] {
   return arr;
 }
 
-function buildItems(): VocabItem[] {
-  return VOCABULARY
+function buildItems(vocab: VocabItem[]): VocabItem[] {
+  return vocab
     .filter(v => v.albanian.length <= 8)
     .sort(() => Math.random() - 0.5)
     .slice(0, ROUNDS);
@@ -135,10 +136,12 @@ export default function WordScramble() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
+  const { daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [items, setItems] = useState<VocabItem[]>(() => buildItems());
+  const [items, setItems] = useState<VocabItem[]>(() => buildItems(getAvailableVocab(0)));
   const [roundIdx, setRoundIdx] = useState(0);
   const [pool, setPool] = useState<Letter[]>([]);
   const [placed, setPlaced] = useState<Letter[]>([]);
@@ -149,6 +152,14 @@ export default function WordScramble() {
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const locked = useRef(false);
+  const didSmartInit = useRef(false);
+
+  useEffect(() => {
+    if (didSmartInit.current || !progressLoaded) return;
+    didSmartInit.current = true;
+    const vocab = getAvailableVocab(daysUsed).filter(v => v.albanian.length <= 8);
+    setItems(getSmartItems(ROUNDS, vocab));
+  }, [progressLoaded]);
 
   const currentItem = items[roundIdx];
 
@@ -185,7 +196,9 @@ export default function WordScramble() {
   const handleCheck = useCallback(() => {
     if (!currentItem || locked.current) return;
     const attempt = placed.map(l => l.char).join('');
-    if (attempt === currentItem.albanian) {
+    const isCorrect = attempt === currentItem.albanian;
+    recordWordResult(currentItem.id, isCorrect);
+    if (isCorrect) {
       locked.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       praise();
@@ -208,12 +221,13 @@ export default function WordScramble() {
         setPlaced([]);
       }, 650);
     }
-  }, [placed, currentItem, roundIdx]);
+  }, [placed, currentItem, roundIdx, recordWordResult]);
 
   function handleReplay() {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     if (failTimer.current) clearTimeout(failTimer.current);
-    setItems(buildItems());
+    const vocab = getAvailableVocab(daysUsed).filter(v => v.albanian.length <= 8);
+    setItems(getSmartItems(ROUNDS, vocab));
     setRoundIdx(0);
     setScore(0);
     setDone(false);

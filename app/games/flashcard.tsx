@@ -6,16 +6,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
-import { VOCABULARY, VocabItem } from '../../src/data/vocabulary';
+import { VocabItem, getAvailableVocab } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
+import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
 const ROUNDS = 10;
 
-function buildDeck(): VocabItem[] {
-  return [...VOCABULARY].sort(() => Math.random() - 0.5).slice(0, ROUNDS);
+function buildDeck(vocab: VocabItem[]): VocabItem[] {
+  return [...vocab].sort(() => Math.random() - 0.5).slice(0, ROUNDS);
 }
 
 function Summary({ known, total, onReplay, onHome, name }: {
@@ -47,10 +48,12 @@ export default function Flashcard() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop } = useSpeech();
+  const { daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [deck, setDeck] = useState<VocabItem[]>(() => buildDeck());
+  const [deck, setDeck] = useState<VocabItem[]>(() => buildDeck(getAvailableVocab(0)));
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState(0);
@@ -58,6 +61,14 @@ export default function Flashcard() {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const locked = useRef(false);
+  const didSmartInit = useRef(false);
+
+  useEffect(() => {
+    if (didSmartInit.current || !progressLoaded) return;
+    didSmartInit.current = true;
+    const vocab = getAvailableVocab(daysUsed);
+    setDeck(getSmartItems(ROUNDS, vocab));
+  }, [progressLoaded]);
 
   const card = deck[idx];
 
@@ -77,6 +88,7 @@ export default function Flashcard() {
   const advance = useCallback((didKnow: boolean) => {
     if (locked.current) return;
     locked.current = true;
+    recordWordResult(card.id, didKnow);
     if (didKnow) {
       setKnown(k => k + 1);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -96,10 +108,11 @@ export default function Flashcard() {
       }
       locked.current = false;
     });
-  }, [idx, slideAnim, flipAnim]);
+  }, [idx, slideAnim, flipAnim, recordWordResult, card]);
 
   function handleReplay() {
-    setDeck(buildDeck());
+    const vocab = getAvailableVocab(daysUsed);
+    setDeck(getSmartItems(ROUNDS, vocab));
     setIdx(0);
     setFlipped(false);
     setKnown(0);

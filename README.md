@@ -155,15 +155,105 @@ needed.
 
 ### Adding new words
 
-1. Add the word to `vocabulary.ts` (the game source of truth)
-2. Add a matching entry to `WORDS` in `scripts/generate-audio.py`:
+See [Adding New Vocabulary](#adding-new-vocabulary) below for full details.
+Quick version: add to `vocabulary.ts`, add to `WORDS` in `generate-audio.py`, re-run the generator, rebuild.
+
+---
+
+## Adding New Vocabulary
+
+All vocabulary lives in one file: **`src/data/vocabulary.ts`**. Everything else
+(games, spaced repetition, mastery tracking, audio, images) reads from it
+automatically.
+
+### The data shape
+
+```ts
+type VocabItem = {
+  id:       string;      // unique key — used for progress storage, image filenames
+  albanian: string;      // the Albanian word, shown in games and used as TTS key
+  english:  string;      // English translation
+  emoji:    string;      // fallback display when no image file exists
+  category: string;      // 'animals' | 'fruit' | 'colors' | 'family' (or new — see below)
+  tier:     1 | 2 | 3;  // controls when the word unlocks (see tier table below)
+};
+```
+
+### Tier unlock schedule
+
+| Tier | Unlocks after | Use for |
+|------|--------------|---------|
+| `1`  | Day 0 (always) | Core beginner words |
+| `2`  | 3 days of app use | Intermediate words |
+| `3`  | 7 days of app use | Advanced / less common words |
+
+Games only show words the player has unlocked, so tier controls pacing without
+any extra code. To add a new tier, add an entry to `TIER_UNLOCK_DAYS` in
+`vocabulary.ts` and use the new tier number on your words.
+
+### Minimum required change — just the word
+
+Add one object to the `VOCABULARY` array in `src/data/vocabulary.ts`:
+
+```ts
+{ id: 'rabbit', albanian: 'lepuri', english: 'rabbit', emoji: '🐇', category: 'animals', tier: 2 },
+```
+
+Rules for `id`:
+- lowercase, no spaces, ASCII only (e.g. `orange_color` not `ngjyra-portokalli`)
+- must be unique across all items
+- used as the filename stem for images (`assets/images/vocabulary/rabbit.png`)
+
+That's it. The word appears in all games immediately, using the emoji as its
+picture. Spaced repetition, mastery tracking, and progress saving work
+automatically.
+
+### Optional: add an image
+
+Drop a square PNG into `assets/images/vocabulary/` named after the word's `id`,
+then uncomment (or add) one line in `src/data/vocabImages.ts`:
+
+```ts
+rabbit: require('../../assets/images/vocabulary/rabbit.png'),
+```
+
+The games (picture-match, name-it, memory-match) will use the image instead of
+the emoji automatically. No other files need editing.
+
+### Optional: add audio
+
+1. Add an entry to `WORDS` in `scripts/generate-audio.py`:
    ```python
-   "filename_no_diacritics": "Albanian text with diacritics",
-   # e.g.
-   "gjyshe": "gjyshë",
+   "rabbit": "lepuri",          # "filename_stem": "Albanian text"
    ```
-3. Re-run the generator — it skips files that already exist, only generates new ones
-4. Rebuild the bundle
+   The stem is ASCII (no diacritics). The value must match `albanian` in
+   `vocabulary.ts` exactly.
+
+2. Re-run the audio generator (skips files that already exist):
+   ```bash
+   docker compose --profile audio run --rm generate-audio
+   ```
+
+3. Rebuild the bundle:
+   ```bash
+   docker compose up --build -d
+   ```
+
+### Adding a new category
+
+1. Add words to `vocabulary.ts` with the new `category` string.
+2. Add the string to the `CATEGORIES` constant at the bottom of `vocabulary.ts`:
+   ```ts
+   export const CATEGORIES = ['animals', 'fruit', 'colors', 'family', 'your_new_category'] as const;
+   ```
+3. Add one entry to `CAT_META` in `app/games/category-sort.tsx` so the sort
+   game knows what label, emoji, and color to display:
+   ```ts
+   your_new_category: { label: 'Shqip Label', emoji: '🏷️', color: '#FF5722' },
+   ```
+
+No other game files need touching — distractor selection and filtering are
+driven by the `category` field automatically.
 
 ---
 

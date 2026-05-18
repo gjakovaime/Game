@@ -7,9 +7,10 @@ import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
-import { VocabItem, getDistractors, getRandomItems } from '../../src/data/vocabulary';
+import { VocabItem, getAvailableVocab, getDistractors, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
+import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
@@ -17,11 +18,14 @@ const ROUNDS = 5;
 
 type Round = { correct: VocabItem; choices: VocabItem[] };
 
+function buildRound(item: VocabItem, vocab: VocabItem[]): Round {
+  const distractors = getDistractors(item, 3, vocab);
+  return { correct: item, choices: [item, ...distractors].sort(() => Math.random() - 0.5) };
+}
+
 function buildGame(): Round[] {
-  return getRandomItems(ROUNDS).map(item => {
-    const distractors = getDistractors(item, 3);
-    return { correct: item, choices: [item, ...distractors].sort(() => Math.random() - 0.5) };
-  });
+  const vocab = getRandomItems(ROUNDS);
+  return vocab.map(item => buildRound(item, vocab));
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -98,7 +102,8 @@ export default function NameIt() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
-  const { recordStars } = useProgress();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -108,6 +113,14 @@ export default function NameIt() {
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didSmartInit = useRef(false);
+
+  useEffect(() => {
+    if (didSmartInit.current || !progressLoaded) return;
+    didSmartInit.current = true;
+    const vocab = getAvailableVocab(daysUsed);
+    setGame(getSmartItems(ROUNDS, vocab).map(item => buildRound(item, vocab)));
+  }, [progressLoaded]);
 
   const round = game[roundIdx];
 
@@ -131,6 +144,7 @@ export default function NameIt() {
     const isCorrect = item.id === round.correct.id;
     setChoiceStates(prev => ({ ...prev, [item.id]: isCorrect ? 'correct' : 'wrong' }));
 
+    recordWordResult(round.correct.id, isCorrect);
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setScore(s => s + 1);
@@ -144,10 +158,11 @@ export default function NameIt() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
     }
-  }, [round, roundIdx, choiceStates, activeProfile]);
+  }, [round, roundIdx, choiceStates, activeProfile, recordWordResult]);
 
   function handleReplay() {
-    setGame(buildGame());
+    const vocab = getAvailableVocab(daysUsed);
+    setGame(getSmartItems(ROUNDS, vocab).map(item => buildRound(item, vocab)));
     setRoundIdx(0);
     setScore(0);
     setDone(false);

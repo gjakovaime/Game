@@ -6,9 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
-import { VOCABULARY, VocabItem } from '../../src/data/vocabulary';
+import { VocabItem, getAvailableVocab } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
+import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
@@ -23,8 +24,8 @@ const CAT_META = {
 
 type CatId = keyof typeof CAT_META;
 
-function buildQueue(): VocabItem[] {
-  return [...VOCABULARY].sort(() => Math.random() - 0.5).slice(0, TOTAL);
+function buildQueue(items: VocabItem[]): VocabItem[] {
+  return [...items].sort(() => Math.random() - 0.5).slice(0, TOTAL);
 }
 
 function Summary({ score, total, onReplay, onHome, name }: {
@@ -53,17 +54,26 @@ export default function CategorySort() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
-  const { recordStars } = useProgress();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [queue, setQueue] = useState<VocabItem[]>(() => buildQueue());
+  const [queue, setQueue] = useState<VocabItem[]>(() => buildQueue(getAvailableVocab(0)));
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const [flash, setFlash] = useState<{ catId: string; ok: boolean } | null>(null);
   const locked = useRef(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didSmartInit = useRef(false);
+
+  useEffect(() => {
+    if (didSmartInit.current || !progressLoaded) return;
+    didSmartInit.current = true;
+    const vocab = getAvailableVocab(daysUsed);
+    setQueue(getSmartItems(TOTAL, vocab));
+  }, [progressLoaded]);
 
   const item = queue[idx];
 
@@ -84,6 +94,7 @@ export default function CategorySort() {
     if (locked.current || !item) return;
     locked.current = true;
     const ok = item.category === catId;
+    recordWordResult(item.id, ok);
     setFlash({ catId, ok });
     if (ok) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -104,10 +115,11 @@ export default function CategorySort() {
         locked.current = false;
       }, 900);
     }
-  }, [item, idx, activeProfile]);
+  }, [item, idx, activeProfile, recordWordResult]);
 
   function handleReplay() {
-    setQueue(buildQueue());
+    const vocab = getAvailableVocab(daysUsed);
+    setQueue(getSmartItems(TOTAL, vocab));
     setIdx(0);
     setScore(0);
     setDone(false);

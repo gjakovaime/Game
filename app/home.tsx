@@ -12,10 +12,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BadgeToast } from '../src/components/BadgeToast';
 import { ProfileBadge } from '../src/components/ProfileBadge';
-import { FontSizes, Radii, Spacing } from '../src/constants/colors';
+import { ColorPalette, FontSizes, Radii, Spacing } from '../src/constants/colors';
 import { buttonGloss } from '../src/constants/styles';
+import { TIER_UNLOCK_DAYS } from '../src/data/vocabulary';
 import { useColors, useTheme } from '../src/hooks/useTheme';
 import { ALL_BADGES, Badge, useProgress } from '../src/hooks/useProgress';
+import { MasteryStats, useWordProgress } from '../src/hooks/useWordProgress';
 import { useProfile } from '../src/hooks/useProfile';
 import { GameDef, Unit, UNITS } from '../src/data/units';
 
@@ -198,6 +200,78 @@ function makeHeaderStyles(colors: ReturnType<typeof useColors>) {
   });
 }
 
+// ─── Mastery bar ──────────────────────────────────────────────────────────────
+
+function MasteryBar({ masteryStats, daysUsed }: { masteryStats: MasteryStats; daysUsed: number }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeMasteryStyles(colors), [colors]);
+  const { total, mastered, familiar, learning } = masteryStats;
+  const active = mastered + familiar + learning;
+  if (active === 0) return null;
+
+  const nextTierDay = daysUsed < 3 ? 3 : daysUsed < 7 ? 7 : null;
+  const daysToNext = nextTierDay !== null ? nextTierDay - daysUsed : null;
+  const nextTierCount = daysUsed < 3 ? 7 : daysUsed < 7 ? 3 : null;
+
+  return (
+    <View style={styles.wrap}>
+      <View style={styles.labelRow}>
+        <Text style={styles.title}>Fjalori im</Text>
+        <Text style={styles.count}>{active}/{total} fjalë</Text>
+      </View>
+      <View style={styles.bar}>
+        {mastered > 0 && (
+          <View style={[styles.seg, { flex: mastered, backgroundColor: colors.success }]} />
+        )}
+        {familiar > 0 && (
+          <View style={[styles.seg, { flex: familiar, backgroundColor: colors.primary }]} />
+        )}
+        {learning > 0 && (
+          <View style={[styles.seg, { flex: learning, backgroundColor: colors.secondary }]} />
+        )}
+        <View style={[styles.seg, { flex: total - active, backgroundColor: colors.border }]} />
+      </View>
+      <View style={styles.legend}>
+        <Text style={[styles.dot, { color: colors.success }]}>● </Text>
+        <Text style={styles.legendText}>Zotëruar ({mastered})</Text>
+        <Text style={[styles.dot, { color: colors.primary }]}>  ● </Text>
+        <Text style={styles.legendText}>Njohur ({familiar})</Text>
+        <Text style={[styles.dot, { color: colors.secondary }]}>  ● </Text>
+        <Text style={styles.legendText}>Duke mësuar ({learning})</Text>
+      </View>
+      {daysToNext !== null && nextTierCount !== null && daysToNext > 0 && (
+        <Text style={styles.unlockHint}>
+          🔓 {nextTierCount} fjalë të reja shfaqen pas {daysToNext} ditë
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function makeMasteryStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    wrap: {
+      backgroundColor: colors.surface, borderRadius: Radii.xl, borderWidth: 1,
+      borderColor: colors.border, padding: Spacing.md, marginBottom: Spacing.md,
+    },
+    labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
+    title: { fontSize: FontSizes.sm, fontWeight: '800', color: colors.text },
+    count: { fontSize: FontSizes.sm, color: colors.textLight },
+    bar: {
+      flexDirection: 'row', height: 10, borderRadius: Radii.full,
+      overflow: 'hidden', marginBottom: Spacing.sm,
+    },
+    seg: { height: '100%' },
+    legend: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
+    dot: { fontSize: FontSizes.xs },
+    legendText: { fontSize: FontSizes.xs, color: colors.textLight },
+    unlockHint: {
+      marginTop: Spacing.sm, fontSize: FontSizes.xs, color: colors.primary,
+      fontWeight: '700',
+    },
+  });
+}
+
 // ─── Badge shelf ──────────────────────────────────────────────────────────────
 
 function BadgeShelf({ earnedIds }: { earnedIds: string[] }) {
@@ -246,7 +320,8 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { activeProfile, profiles, switchProfile, loaded, reload } = useProfile();
-  const { getStars, getUnitStars, isUnitUnlocked, starsNeededToUnlock, earnedBadges, reload: reloadProgress } = useProgress();
+  const { getStars, getUnitStars, isUnitUnlocked, starsNeededToUnlock, earnedBadges, reload: reloadProgress, daysUsed, recordAppOpen } = useProgress();
+  const { masteryStats, reload: reloadWords } = useWordProgress();
   const [showProfiles, setShowProfiles] = useState(false);
   const [toastBadge, setToastBadge] = useState<Badge | null>(null);
 
@@ -257,6 +332,8 @@ export default function Home() {
   useFocusEffect(useCallback(() => {
     reload();
     reloadProgress();
+    reloadWords();
+    recordAppOpen();
     if (!activeProfile?.id) return;
     const pendingKey = `@albanian/pendingBadge/${activeProfile.id}`;
     AsyncStorage.getItem(pendingKey).then(badgeId => {
@@ -265,7 +342,7 @@ export default function Home() {
       if (badge) setToastBadge(badge);
       AsyncStorage.removeItem(pendingKey);
     });
-  }, [reload, reloadProgress, activeProfile?.id]));
+  }, [reload, reloadProgress, reloadWords, recordAppOpen, activeProfile?.id]));
 
   if (!loaded) {
     return (
@@ -308,6 +385,9 @@ export default function Home() {
           </Text>
           <Text style={styles.welcomeSub}>Mëso shqipen duke luajtur!</Text>
         </View>
+
+        {/* Mastery bar */}
+        <MasteryBar masteryStats={masteryStats} daysUsed={daysUsed} />
 
         {/* Badge shelf */}
         <BadgeShelf earnedIds={earnedBadges} />

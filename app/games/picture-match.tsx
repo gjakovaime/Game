@@ -14,9 +14,10 @@ import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
-import { VocabItem, getDistractors, getRandomItems } from '../../src/data/vocabulary';
+import { VocabItem, getAvailableVocab, getDistractors, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
+import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
@@ -24,21 +25,15 @@ const ROUNDS = 5;
 
 type RoundItem = { correct: VocabItem; choices: VocabItem[] };
 
-function buildRound(item: VocabItem): RoundItem {
-  const distractors = getDistractors(item, 3);
-  while (distractors.length < 3) {
-    const extras = getRandomItems(1).filter(
-      (v) => v.id !== item.id && !distractors.find((d) => d.id === v.id)
-    );
-    if (extras.length) distractors.push(extras[0]);
-    else break;
-  }
+function buildRound(item: VocabItem, vocab: VocabItem[]): RoundItem {
+  const distractors = getDistractors(item, 3, vocab);
   const choices = [item, ...distractors].sort(() => Math.random() - 0.5);
   return { correct: item, choices };
 }
 
 function buildGame(): RoundItem[] {
-  return getRandomItems(ROUNDS).map(buildRound);
+  const vocab = getRandomItems(ROUNDS);
+  return vocab.map(item => buildRound(item, vocab));
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -120,7 +115,8 @@ export default function PictureMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
-  const { recordStars } = useProgress();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -130,6 +126,14 @@ export default function PictureMatch() {
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didSmartInit = useRef(false);
+
+  useEffect(() => {
+    if (didSmartInit.current || !progressLoaded) return;
+    didSmartInit.current = true;
+    const vocab = getAvailableVocab(daysUsed);
+    setGame(getSmartItems(ROUNDS, vocab).map(item => buildRound(item, vocab)));
+  }, [progressLoaded]);
 
   const round = game[roundIdx];
 
@@ -155,6 +159,7 @@ export default function PictureMatch() {
     const isCorrect = item.id === round.correct.id;
     setTileStates((prev) => ({ ...prev, [item.id]: isCorrect ? 'correct' : 'wrong' }));
 
+    recordWordResult(round.correct.id, isCorrect);
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setScore((s) => s + 1);
@@ -167,10 +172,11 @@ export default function PictureMatch() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       mistake();
     }
-  }, [round, roundIdx, tileStates, activeProfile]);
+  }, [round, roundIdx, tileStates, activeProfile, recordWordResult]);
 
   function handleReplay() {
-    setGame(buildGame());
+    const vocab = getAvailableVocab(daysUsed);
+    setGame(getSmartItems(ROUNDS, vocab).map(item => buildRound(item, vocab)));
     setRoundIdx(0);
     setScore(0);
     setDone(false);

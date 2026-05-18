@@ -13,18 +13,18 @@ export type Badge = {
 };
 
 export const ALL_BADGES: Badge[] = [
-  { id: 'first_play',   emoji: '🎮', title: 'Lojtari i Parë!',  description: 'Luajte lojën tuaj të parë!' },
-  { id: 'first_star',   emoji: '⭐', title: 'Ylli i Parë!',     description: 'Fite yllin tuaj të parë!' },
-  { id: 'first_3star',  emoji: '🌟', title: 'Perfekt!',          description: 'Morët 3 yje në një lojë!' },
-  { id: 'unit1_done',   emoji: '🌱', title: 'Fillistar!',        description: 'Luajte të gjitha lojërat e Unit 1!' },
-  { id: 'unit2_unlock', emoji: '🔓', title: 'Fjalori Hapet!',   description: 'Zhbllokuat Unit 2!' },
-  { id: 'unit2_done',   emoji: '📖', title: 'Fjalorist!',        description: 'Luajte të gjitha lojërat e Unit 2!' },
-  { id: 'unit3_unlock', emoji: '💬', title: 'Fjali Hapen!',     description: 'Zhbllokuat Unit 3!' },
-  { id: 'unit3_done',   emoji: '🧩', title: 'Ndërtues Fjalish!', description: 'Luajte të gjitha lojërat e Unit 3!' },
-  { id: 'unit4_unlock', emoji: '🏆', title: 'Ekspert Hapet!',   description: 'Zhbllokuat nivelin Ekspert!' },
-  { id: 'unit4_done',   emoji: '👑', title: 'Kampion!',          description: 'Luajte të gjitha lojërat!' },
-  { id: 'all_3stars',   emoji: '✨', title: 'Yllistari!',        description: 'Morët 3 yje në çdo lojë!' },
-  { id: 'speedrun',     emoji: '🔥', title: 'Në Zjarr!',         description: 'Fituat 3 yje 3 herë radhazi!' },
+  { id: 'first_play',   emoji: '🎮', title: 'Loja e Parë!',  description: 'Luajte lojën tuaj të parë.' },
+  { id: 'first_star',   emoji: '⭐', title: 'Ylli i Parë!',     description: 'Fitove yllin tuaj të parë.' },
+  { id: 'first_3star',  emoji: '🌟', title: 'Shkëlqyeshëm!',          description: 'Morët 3 yje në një lojë.' },
+  { id: 'unit1_done',   emoji: '🌱', title: 'Fillistar!',        description: 'Luajte të gjitha lojërat në njesinë e parë.' },
+  { id: 'unit2_unlock', emoji: '🔓', title: 'Hape Fjalori!',   description: 'Zhbllokuat njesinë e dytë.' },
+  { id: 'unit2_done',   emoji: '📖', title: 'Fjalorist!',        description: 'Luajte të gjitha lojërat në njesinë e dytë.' },
+  { id: 'unit3_unlock', emoji: '💬', title: 'Fjali Hapen!',     description: 'Zhbllokuat njesinë e tretë.' },
+  { id: 'unit3_done',   emoji: '🧩', title: 'Ndërtues Fjalish!', description: 'Luajte të gjitha lojërat në njesinë e tretë' },
+  { id: 'unit4_unlock', emoji: '🏆', title: 'Ekspert Hapet!',   description: 'Zhbllokuat nivelin Ekspert.' },
+  { id: 'unit4_done',   emoji: '👑', title: 'Shembullorë!',          description: 'Luajte të gjitha lojërat.' },
+  { id: 'all_3stars',   emoji: '✨', title: 'Yllistari!',        description: 'Morët 3 yje në çdo lojë.' },
+  { id: 'speedrun',     emoji: '🔥', title: 'Po qet flakë!',         description: 'Fituat 3 yje 3 herë radhazi.' },
 ];
 
 export function useProgress() {
@@ -34,9 +34,11 @@ export function useProgress() {
   const progressKey = profileId ? `@albanian/progress/${profileId}` : null;
   const badgesKey   = profileId ? `@albanian/badges/${profileId}`   : null;
   const streakKey   = profileId ? `@albanian/streak/${profileId}`   : null;
+  const daysKey     = profileId ? `@albanian/days/${profileId}`     : null;
 
   const [progress, setProgress] = useState<GameProgress>({});
   const [earnedBadges, setEarnedBadges] = useState<string[]>([]);
+  const [daysUsed, setDaysUsed] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -45,12 +47,14 @@ export function useProgress() {
     Promise.all([
       AsyncStorage.getItem(progressKey),
       AsyncStorage.getItem(badgesKey),
-    ]).then(([rawP, rawB]) => {
+      daysKey ? AsyncStorage.getItem(daysKey) : Promise.resolve(null),
+    ]).then(([rawP, rawB, rawD]) => {
       setProgress(rawP ? JSON.parse(rawP) : {});
       setEarnedBadges(rawB ? JSON.parse(rawB) : []);
+      setDaysUsed(rawD ? (JSON.parse(rawD) as string[]).length : 0);
       setLoaded(true);
     });
-  }, [progressKey, badgesKey]);
+  }, [progressKey, badgesKey, daysKey]);
 
   const getStars = useCallback((gameId: string): number => {
     return progress[gameId] ?? 0;
@@ -80,13 +84,27 @@ export function useProgress() {
 
   const reload = useCallback(async () => {
     if (!progressKey || !badgesKey) return;
-    const [rawP, rawB] = await Promise.all([
+    const [rawP, rawB, rawD] = await Promise.all([
       AsyncStorage.getItem(progressKey),
       AsyncStorage.getItem(badgesKey),
+      daysKey ? AsyncStorage.getItem(daysKey) : Promise.resolve(null),
     ]);
     setProgress(rawP ? JSON.parse(rawP) : {});
     setEarnedBadges(rawB ? JSON.parse(rawB) : []);
-  }, [progressKey, badgesKey]);
+    if (rawD) setDaysUsed((JSON.parse(rawD) as string[]).length);
+  }, [progressKey, badgesKey, daysKey]);
+
+  const recordAppOpen = useCallback(async () => {
+    if (!daysKey) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const raw = await AsyncStorage.getItem(daysKey);
+    const days: string[] = raw ? JSON.parse(raw) : [];
+    if (!days.includes(today)) {
+      const updated = [...days, today];
+      await AsyncStorage.setItem(daysKey, JSON.stringify(updated));
+      setDaysUsed(updated.length);
+    }
+  }, [daysKey]);
 
   const recordStars = useCallback(async (gameId: string, stars: number) => {
     if (!progressKey || !badgesKey || !streakKey) return;
@@ -154,5 +172,7 @@ export function useProgress() {
     reload,
     earnedBadges,
     loaded,
+    daysUsed,
+    recordAppOpen,
   };
 }

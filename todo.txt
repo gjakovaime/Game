@@ -1,14 +1,22 @@
 plan/todo:
-1. change the audio that is being used to read the tasks. Use Metas free models to generate the necessary words locally, later i can swap them with native speaker recordings
 2. Manual todo do, not for AI: generate new images for bej fjalin
-3. research new games and generate. 
-4. change ui so that the available games match the age of the profile
-5. the UI is blah - ask for help? New color scheme with a dark mode option
-6. how do we view it in mobile devices?
+3. Add bevels to buttons/elements to make them fancier
 7. explore the vooks style of: build your own story. more complex, but excellent for the 7+ age group
 8. Setting/navigation prompt should have an option to select english or shqip
-9.
-
+9. Additional games: What doesn't belong, find the missing letter, "Kush ku qendron" for space like "nwn, mbi, jasht, anash" but it may also fit in Opposites like "nxehte, ftohte, plot, zbrazet"
+10. Apply the tiered schedule logic to the sentences as well
+11. this component repeats in every page. Can you refactor it such that I can make text updates only in one spot? If you think I misunderstood, correct me first     <View style={styles.summary}>
+        <SummaryCelebration />
+        <Text style={styles.summaryTitle}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>
+        <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
+        <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
+        <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
+          <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
+        </Pressable>
+        <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
+          <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
+        </Pressable>
+      </View>
 
 X. prompt to download if you want to enable this feature:
   long term plan would be to add a game/feature where a kid can pronounce a word into the microphone

@@ -7,9 +7,10 @@ import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
 import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
-import { VOCABULARY, VocabItem, getRandomItems } from '../../src/data/vocabulary';
+import { VocabItem, getAvailableVocab, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
+import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
@@ -24,21 +25,25 @@ type TranslateRound = {
   choices: string[];
 };
 
-function buildRound(item: VocabItem, direction: Direction): TranslateRound {
+function buildRound(item: VocabItem, direction: Direction, vocab: VocabItem[]): TranslateRound {
   const correct = direction === 'alb-to-eng' ? item.english : item.albanian;
-  const pool = VOCABULARY
+  const pool = vocab
     .filter(v => v.id !== item.id)
     .map(v => direction === 'alb-to-eng' ? v.english : v.albanian);
   const wrongs = pool.sort(() => Math.random() - 0.5).slice(0, 3);
   return { item, direction, correct, choices: [correct, ...wrongs].sort(() => Math.random() - 0.5) };
 }
 
-function buildGame(): TranslateRound[] {
-  const items = getRandomItems(ROUNDS);
+function buildGame(items: VocabItem[], vocab: VocabItem[]): TranslateRound[] {
   return items.map((item, i) => {
     const direction: Direction = i % 2 === 0 ? 'alb-to-eng' : 'eng-to-alb';
-    return buildRound(item, direction);
+    return buildRound(item, direction, vocab);
   });
+}
+
+function buildFallbackGame(): TranslateRound[] {
+  const vocab = getRandomItems(20);
+  return buildGame(vocab.slice(0, ROUNDS), vocab);
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -129,10 +134,12 @@ export default function Translate() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, speakEnglish, praise, stop, mistake } = useSpeech();
+  const { daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [game, setGame] = useState<TranslateRound[]>(() => buildGame());
+  const [game, setGame] = useState<TranslateRound[]>(() => buildFallbackGame());
   const [roundIdx, setRoundIdx] = useState(0);
   const [choiceStates, setChoiceStates] = useState<Record<string, 'idle' | 'correct' | 'wrong'>>({});
   const [score, setScore] = useState(0);
@@ -140,6 +147,14 @@ export default function Translate() {
   const [showFail, setShowFail] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didSmartInit = useRef(false);
+
+  useEffect(() => {
+    if (didSmartInit.current || !progressLoaded) return;
+    didSmartInit.current = true;
+    const vocab = getAvailableVocab(daysUsed);
+    setGame(buildGame(getSmartItems(ROUNDS, vocab), vocab));
+  }, [progressLoaded]);
 
   const round = game[roundIdx];
 
@@ -162,6 +177,7 @@ export default function Translate() {
     if (Object.values(choiceStates).includes('correct')) return;
     const isCorrect = choice === round.correct;
     setChoiceStates(prev => ({ ...prev, [choice]: isCorrect ? 'correct' : 'wrong' }));
+    recordWordResult(round.item.id, isCorrect);
 
     if (isCorrect) {
       setScore(s => s + 1);
@@ -182,12 +198,13 @@ export default function Translate() {
       setShowFail(true);
       failTimer.current = setTimeout(() => setShowFail(false), 1400);
     }
-  }, [round, roundIdx, choiceStates]);
+  }, [round, roundIdx, choiceStates, recordWordResult]);
 
   function handleReplay() {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     if (failTimer.current) clearTimeout(failTimer.current);
-    setGame(buildGame());
+    const vocab = getAvailableVocab(daysUsed);
+    setGame(buildGame(getSmartItems(ROUNDS, vocab), vocab));
     setRoundIdx(0);
     setScore(0);
     setDone(false);

@@ -7,9 +7,10 @@ import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
-import { VocabItem, getRandomItems } from '../../src/data/vocabulary';
+import { VocabItem, getAvailableVocab, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
+import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
 
@@ -20,8 +21,7 @@ const ROWS = (PAIR_COUNT * 2) / COLS;
 type CardData = { id: string; pairId: string; type: 'word' | 'emoji'; item: VocabItem };
 type CardState = 'hidden' | 'flipped' | 'matched';
 
-function buildCards(): CardData[] {
-  const items = getRandomItems(PAIR_COUNT);
+function buildCards(items: VocabItem[]): CardData[] {
   const cards: CardData[] = [];
   for (const item of items) {
     cards.push({ id: `${item.id}-word`,  pairId: item.id, type: 'word',  item });
@@ -106,11 +106,12 @@ export default function MemoryMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
-  const { recordStars } = useProgress();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [cards, setCards] = useState<CardData[]>(() => buildCards());
+  const [cards, setCards] = useState<CardData[]>(() => buildCards(getRandomItems(PAIR_COUNT)));
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
   const [flipped, setFlipped] = useState<string[]>([]);
   const [moves, setMoves] = useState(0);
@@ -119,6 +120,14 @@ export default function MemoryMatch() {
   const [gridSize, setGridSize] = useState({ w: 0, h: 0 });
   const locked = useRef(false);
   const matchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didSmartInit = useRef(false);
+
+  useEffect(() => {
+    if (didSmartInit.current || !progressLoaded) return;
+    didSmartInit.current = true;
+    const vocab = getAvailableVocab(daysUsed);
+    setCards(buildCards(getSmartItems(PAIR_COUNT, vocab)));
+  }, [progressLoaded]);
 
   const cardSize = gridSize.w > 0
     ? Math.floor(Math.min(
@@ -162,6 +171,7 @@ export default function MemoryMatch() {
     const cardB = cards.find(c => c.id === b)!;
 
     if (cardA.pairId === cardB.pairId) {
+      recordWordResult(cardA.item.id, true);
       const newMatches = matches + 1;
       setMatches(newMatches);
       setCardStates(prev => ({ ...prev, [a]: 'matched', [b]: 'matched' }));
@@ -183,11 +193,12 @@ export default function MemoryMatch() {
         locked.current = false;
       }, 900);
     }
-  }, [cards, cardStates, flipped, matches, speak, praise, mistake]);
+  }, [cards, cardStates, flipped, matches, speak, praise, mistake, recordWordResult]);
 
   function handleReplay() {
     if (matchTimer.current) clearTimeout(matchTimer.current);
-    setCards(buildCards());
+    const vocab = getAvailableVocab(daysUsed);
+    setCards(buildCards(getSmartItems(PAIR_COUNT, vocab)));
     setCardStates({});
     setFlipped([]);
     setMoves(0);
