@@ -5,3 +5,7 @@ export const buttonGloss: any = {
   backgroundImage: 'var(--gloss-gradient)',
   boxShadow: 'var(--gloss-shadow)',
 };
+
+export const bevelCard: any = {
+  boxShadow: 'var(--card-bevel-shadow)',
+};

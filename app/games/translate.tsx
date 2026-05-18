@@ -4,15 +4,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
-import { SummaryCelebration } from '../../src/components/SummaryCelebration';
+import { GameSummary } from '../../src/components/GameSummary';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
-import { buttonGloss } from '../../src/constants/styles';
 import { VocabItem, getAvailableVocab, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
 import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
+import { useT } from '../../src/hooks/useT';
 
 const ROUNDS = 6;
 
@@ -94,50 +94,15 @@ const choiceTileStyles = StyleSheet.create({
   label: { fontSize: FontSizes.md, fontWeight: '800', textAlign: 'center' },
 });
 
-function Summary({ score, total, onReplay, onHome, name }: {
-  score: number; total: number; onReplay: () => void; onHome: () => void; name?: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => makeSumStyles(colors), [colors]);
-  const stars = score >= total ? 3 : score >= Math.ceil(total * 0.67) ? 2 : 1;
-  const { recordStars } = useProgress();
-  useEffect(() => { recordStars('translate', stars); }, []);
-
-  return (
-    <View style={styles.wrap}>
-      <SummaryCelebration />
-      <Text style={styles.title}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
-      <Text style={styles.stars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.score}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
-        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
-      </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function makeSumStyles(colors: ColorPalette) {
-  return StyleSheet.create({
-    wrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    title: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-    stars: { fontSize: 48, marginBottom: Spacing.md },
-    score: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
-    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
-  });
-}
-
 export default function Translate() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, speakEnglish, praise, stop, mistake } = useSpeech();
-  const { daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
   const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [game, setGame] = useState<TranslateRound[]>(() => buildFallbackGame());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -167,7 +132,10 @@ export default function Translate() {
   }, [roundIdx, game]);
 
   useEffect(() => {
-    if (done) praise();
+    if (!done) return;
+    praise();
+    const stars = (score >= ROUNDS ? 3 : score >= Math.ceil(ROUNDS * 0.67) ? 2 : 1) as 1 | 2 | 3;
+    recordStars('translate', stars);
   }, [done]);
 
   useEffect(() => () => stop(), []);
@@ -213,9 +181,10 @@ export default function Translate() {
   }
 
   if (done) {
+    const stars = (score >= ROUNDS ? 3 : score >= Math.ceil(ROUNDS * 0.67) ? 2 : 1) as 1 | 2 | 3;
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary score={score} total={ROUNDS} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
+        <GameSummary stars={stars} scoreText={`${score}/${ROUNDS} saktë!`} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
       </SafeAreaView>
     );
   }
@@ -228,7 +197,7 @@ export default function Translate() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Kthehu</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </Pressable>
         <Text style={styles.progress}>{roundIdx + 1} / {ROUNDS}</Text>
       </View>
@@ -248,8 +217,8 @@ export default function Translate() {
         </Pressable>
       </View>
 
-      <Text style={styles.instruction}>Përkthe! 💬</Text>
-      <Text style={styles.instructionEn}>(Translate the word!)</Text>
+      <Text style={styles.instruction}>{t.games['translate'].instruction}</Text>
+      <Text style={styles.instructionEn}>{t.games['translate'].hint}</Text>
 
       <View style={styles.choicesGrid}>
         {round.choices.map(choice => (

@@ -13,13 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BadgeToast } from '../src/components/BadgeToast';
 import { ProfileBadge } from '../src/components/ProfileBadge';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../src/constants/colors';
-import { buttonGloss } from '../src/constants/styles';
+import { bevelCard, buttonGloss } from '../src/constants/styles';
 import { TIER_UNLOCK_DAYS } from '../src/data/vocabulary';
 import { useColors, useTheme } from '../src/hooks/useTheme';
 import { ALL_BADGES, Badge, useProgress } from '../src/hooks/useProgress';
 import { MasteryStats, useWordProgress } from '../src/hooks/useWordProgress';
 import { useProfile } from '../src/hooks/useProfile';
 import { GameDef, Unit, UNITS } from '../src/data/units';
+import { useT } from '../src/hooks/useT';
 
 // ─── Stars display ────────────────────────────────────────────────────────────
 
@@ -49,6 +50,9 @@ function GameNode({ game, stars, locked, unitColor, isLast }: GameNodeProps) {
   const router = useRouter();
   const colors = useColors();
   const styles = useMemo(() => makeNodeStyles(colors), [colors]);
+  const t = useT();
+  const { activeProfile } = useProfile();
+  const gameTitle = activeProfile?.uiLang === 'en' ? game.titleEn : game.title;
 
   function handlePress() {
     if (!locked) router.push(game.route as any);
@@ -68,7 +72,7 @@ function GameNode({ game, stars, locked, unitColor, isLast }: GameNodeProps) {
           { opacity: pressed && !locked ? 0.85 : opacity },
         ]}
         accessibilityRole="button"
-        accessibilityLabel={locked ? `${game.title} — bllokim` : game.title}
+        accessibilityLabel={locked ? `${gameTitle} — bllokim` : gameTitle}
       >
         <View style={[styles.circle, { backgroundColor: locked ? colors.border : unitColor }]}>
           <Text style={styles.circleEmoji}>{game.emoji}</Text>
@@ -80,10 +84,10 @@ function GameNode({ game, stars, locked, unitColor, isLast }: GameNodeProps) {
         </View>
         <View style={styles.info}>
           <Text style={[styles.title, locked && { color: colors.textLight }]} numberOfLines={1}>
-            {game.title}
+            {gameTitle}
           </Text>
           {locked
-            ? <Text style={styles.lockedLabel}>🔒 E bllokuar</Text>
+            ? <Text style={styles.lockedLabel}>{t.home.locked}</Text>
             : <StarsRow count={stars} size={14} />
           }
         </View>
@@ -103,6 +107,7 @@ function makeNodeStyles(colors: ReturnType<typeof useColors>) {
     lineCol: { width: 28, alignItems: 'center', paddingTop: 52 },
     lineSegment: { width: 2, flex: 1, backgroundColor: colors.border, minHeight: 20 },
     card: {
+      ...bevelCard,
       flex: 1, flexDirection: 'row', alignItems: 'center',
       backgroundColor: colors.surface, borderRadius: Radii.xl,
       padding: Spacing.md, marginLeft: Spacing.sm, marginBottom: Spacing.sm,
@@ -143,7 +148,11 @@ type UnitHeaderProps = {
 function UnitHeader({ unit, totalStars, maxStars, unlocked, starsNeeded }: UnitHeaderProps) {
   const colors = useColors();
   const styles = useMemo(() => makeHeaderStyles(colors), [colors]);
+  const t = useT();
+  const { activeProfile } = useProfile();
   const pct = maxStars > 0 ? totalStars / maxStars : 0;
+  const unitTitle = activeProfile?.uiLang === 'en' ? unit.titleEn : unit.title;
+  const unitSubtitle = activeProfile?.uiLang === 'en' ? unit.subtitleEn : unit.subtitle;
 
   return (
     <View style={[styles.wrap, { borderColor: unlocked ? unit.color : colors.border }]}>
@@ -154,10 +163,10 @@ function UnitHeader({ unit, totalStars, maxStars, unlocked, starsNeeded }: UnitH
             UNIT {unit.num}
           </Text>
           <Text style={[styles.title, { color: unlocked ? colors.text : colors.textLight }]}>
-            {unit.title}
+            {unitTitle}
           </Text>
           <Text style={styles.subtitle}>
-            {unlocked ? unit.subtitle : `Nevojiten ${starsNeeded} yje më shumë ⭐`}
+            {unlocked ? unitSubtitle : t.home.starsNeeded(starsNeeded)}
           </Text>
         </View>
         {!unlocked && <Text style={styles.lockBig}>🔒</Text>}
@@ -168,7 +177,7 @@ function UnitHeader({ unit, totalStars, maxStars, unlocked, starsNeeded }: UnitH
             <View style={[styles.progressFill, { width: `${Math.round(pct * 100)}%` as any, backgroundColor: unit.color }]} />
           </View>
           <Text style={[styles.progressLabel, { color: unit.color }]}>
-            {totalStars} / {maxStars} yje
+            {t.home.unitStars(totalStars, maxStars)}
           </Text>
         </>
       )}
@@ -179,6 +188,7 @@ function UnitHeader({ unit, totalStars, maxStars, unlocked, starsNeeded }: UnitH
 function makeHeaderStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     wrap: {
+      ...bevelCard,
       borderRadius: Radii.xl, borderWidth: 2,
       backgroundColor: colors.surface, padding: Spacing.md, marginBottom: Spacing.md,
       shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
@@ -205,6 +215,7 @@ function makeHeaderStyles(colors: ReturnType<typeof useColors>) {
 function MasteryBar({ masteryStats, daysUsed }: { masteryStats: MasteryStats; daysUsed: number }) {
   const colors = useColors();
   const styles = useMemo(() => makeMasteryStyles(colors), [colors]);
+  const t = useT();
   const { total, mastered, familiar, learning } = masteryStats;
   const active = mastered + familiar + learning;
   if (active === 0) return null;
@@ -216,8 +227,8 @@ function MasteryBar({ masteryStats, daysUsed }: { masteryStats: MasteryStats; da
   return (
     <View style={styles.wrap}>
       <View style={styles.labelRow}>
-        <Text style={styles.title}>Fjalori im</Text>
-        <Text style={styles.count}>{active}/{total} fjalë</Text>
+        <Text style={styles.title}>{t.vocab.title}</Text>
+        <Text style={styles.count}>{active}/{total} {t.vocab.words}</Text>
       </View>
       <View style={styles.bar}>
         {mastered > 0 && (
@@ -233,15 +244,15 @@ function MasteryBar({ masteryStats, daysUsed }: { masteryStats: MasteryStats; da
       </View>
       <View style={styles.legend}>
         <Text style={[styles.dot, { color: colors.success }]}>● </Text>
-        <Text style={styles.legendText}>Zotëruar ({mastered})</Text>
+        <Text style={styles.legendText}>{t.vocab.mastered} ({mastered})</Text>
         <Text style={[styles.dot, { color: colors.primary }]}>  ● </Text>
-        <Text style={styles.legendText}>Njohur ({familiar})</Text>
+        <Text style={styles.legendText}>{t.vocab.familiar} ({familiar})</Text>
         <Text style={[styles.dot, { color: colors.secondary }]}>  ● </Text>
-        <Text style={styles.legendText}>Duke mësuar ({learning})</Text>
+        <Text style={styles.legendText}>{t.vocab.learning} ({learning})</Text>
       </View>
       {daysToNext !== null && nextTierCount !== null && daysToNext > 0 && (
         <Text style={styles.unlockHint}>
-          🔓 {nextTierCount} fjalë të reja shfaqen pas {daysToNext} ditë
+          {t.vocab.unlockHint(nextTierCount, daysToNext)}
         </Text>
       )}
     </View>
@@ -277,12 +288,13 @@ function makeMasteryStyles(colors: ColorPalette) {
 function BadgeShelf({ earnedIds }: { earnedIds: string[] }) {
   const colors = useColors();
   const styles = useMemo(() => makeShelfStyles(colors), [colors]);
+  const t = useT();
   if (earnedIds.length === 0) return null;
   const badges = ALL_BADGES.filter(b => earnedIds.includes(b.id));
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>Arritjet e mia</Text>
+      <Text style={styles.label}>{t.badges.title}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {badges.map(b => (
           <View key={b.id} style={styles.chip} accessibilityLabel={b.title}>
@@ -322,6 +334,7 @@ export default function Home() {
   const { activeProfile, profiles, switchProfile, loaded, reload } = useProfile();
   const { getStars, getUnitStars, isUnitUnlocked, starsNeededToUnlock, earnedBadges, reload: reloadProgress, daysUsed, recordAppOpen } = useProgress();
   const { masteryStats, reload: reloadWords } = useWordProgress();
+  const t = useT();
   const [showProfiles, setShowProfiles] = useState(false);
   const [toastBadge, setToastBadge] = useState<Badge | null>(null);
 
@@ -381,9 +394,9 @@ export default function Home() {
         {/* Welcome */}
         <View style={styles.welcome}>
           <Text style={styles.welcomeText}>
-            Mirë se erdhe, {activeProfile.name}! {activeProfile.avatarEmoji}
+            {t.home.welcome(activeProfile.name, activeProfile.avatarEmoji)}
           </Text>
-          <Text style={styles.welcomeSub}>Mëso shqipen duke luajtur!</Text>
+          <Text style={styles.welcomeSub}>{t.home.welcomeSub}</Text>
         </View>
 
         {/* Mastery bar */}
@@ -424,7 +437,7 @@ export default function Home() {
           );
         })}
 
-        <Text style={styles.footer}>Vazhdo të mësosh!</Text>
+        <Text style={styles.footer}>{t.home.footer}</Text>
       </ScrollView>
 
       {showProfiles && (
@@ -448,7 +461,7 @@ export default function Home() {
             style={styles.dropdownAddRow}
             onPress={() => { setShowProfiles(false); router.push('/onboarding'); }}
           >
-            <Text style={styles.dropdownAddText}>+ Lojtar i ri</Text>
+            <Text style={styles.dropdownAddText}>{t.home.addPlayer}</Text>
           </Pressable>
         </View>
       )}

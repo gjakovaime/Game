@@ -3,9 +3,8 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SummaryCelebration } from '../../src/components/SummaryCelebration';
+import { GameSummary } from '../../src/components/GameSummary';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
-import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
 import { VocabItem, getAvailableVocab, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
@@ -13,6 +12,7 @@ import { useProgress } from '../../src/hooks/useProgress';
 import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
+import { useT } from '../../src/hooks/useT';
 
 const PAIR_COUNT = 6;
 const COLS = 3;
@@ -82,26 +82,6 @@ const cardStyle = StyleSheet.create({
   cardWord: { fontWeight: '800', textAlign: 'center', paddingHorizontal: 4 },
 });
 
-function Summary({ moves, onReplay, onHome, name }: { moves: number; onReplay: () => void; onHome: () => void; name?: string }) {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const stars = moves <= PAIR_COUNT + 2 ? 3 : moves <= PAIR_COUNT * 2 ? 2 : 1;
-  return (
-    <View style={styles.summary}>
-      <SummaryCelebration />
-      <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
-      <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.summaryScore}>{moves} lëvizje!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
-        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
-      </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 export default function MemoryMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
@@ -110,6 +90,7 @@ export default function MemoryMatch() {
   const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [cards, setCards] = useState<CardData[]>(() => buildCards(getRandomItems(PAIR_COUNT)));
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
@@ -208,9 +189,10 @@ export default function MemoryMatch() {
   }
 
   if (done) {
+    const stars = (moves <= PAIR_COUNT + 2 ? 3 : moves <= PAIR_COUNT * 2 ? 2 : 1) as 1 | 2 | 3;
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary moves={moves} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
+        <GameSummary stars={stars} scoreText={`${moves} lëvizje!`} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
       </SafeAreaView>
     );
   }
@@ -219,13 +201,13 @@ export default function MemoryMatch() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Kthehu</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </Pressable>
         <Text style={styles.stats}>{matches}/{PAIR_COUNT} çifte  •  {moves} 🔄</Text>
       </View>
 
-      <Text style={styles.instruction}>Gjej çiftet! 🔍</Text>
-      <Text style={styles.instructionEn}>(Match the word to its picture!)</Text>
+      <Text style={styles.instruction}>{t.games['memory-match'].instruction}</Text>
+      <Text style={styles.instructionEn}>{t.games['memory-match'].hint}</Text>
 
       <View
         style={styles.grid}
@@ -265,11 +247,5 @@ function makeStyles(colors: ColorPalette) {
       justifyContent: 'center', alignContent: 'center',
       gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xs,
     },
-    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
-    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
   });
 }

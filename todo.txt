@@ -4,7 +4,7 @@ plan/todo:
 7. explore the vooks style of: build your own story. more complex, but excellent for the 7+ age group
 8. Setting/navigation prompt should have an option to select english or shqip
 9. Additional games: What doesn't belong, find the missing letter, "Kush ku qendron" for space like "nwn, mbi, jasht, anash" but it may also fit in Opposites like "nxehte, ftohte, plot, zbrazet"
-10. Apply the tiered schedule logic to the sentences as well
+10. Apply the tiered vocabulary logic to the sentences as well
 11. this component repeats in every page. Can you refactor it such that I can make text updates only in one spot? If you think I misunderstood, correct me first     <View style={styles.summary}>
         <SummaryCelebration />
         <Text style={styles.summaryTitle}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>

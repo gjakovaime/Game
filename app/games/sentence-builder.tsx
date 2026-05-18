@@ -12,15 +12,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SceneIllustration } from '../../src/components/SceneIllustration';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
-import { SummaryCelebration } from '../../src/components/SummaryCelebration';
+import { GameSummary } from '../../src/components/GameSummary';
 import { WordTile } from '../../src/components/WordTile';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
 import { buttonGloss } from '../../src/constants/styles';
-import { Sentence, getRandomSentences } from '../../src/data/sentences';
+import { Sentence, getAvailableSentences } from '../../src/data/sentences';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
+import { useT } from '../../src/hooks/useT';
 
 const ROUNDS = 5;
 
@@ -29,31 +30,28 @@ const ROUNDS = 5;
 function InstructionsModal({ visible, onDismiss }: { visible: boolean; onDismiss: () => void }) {
   const colors = useColors();
   const styles = useMemo(() => makeIStyles(colors), [colors]);
+  const t = useT();
+  const sb = t.games['sentence-builder'];
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Text style={styles.header}>Si luhet? 🤔</Text>
-          <Text style={styles.subEn}>(How do you play?)</Text>
+          <Text style={styles.header}>{sb.howToPlay}</Text>
+          <Text style={styles.subEn}>{sb.howToPlaySub}</Text>
 
-          {[
-            { emoji: '👀', albanian: 'Shiko foton!', english: 'Look at the picture!' },
-            { emoji: '👆', albanian: 'Trokitni fjalët!', english: 'Tap the words!' },
-            { emoji: '🧩', albanian: 'Bëni fjalinë!', english: 'Make the sentence!' },
-            { emoji: '⭐', albanian: 'Kontrollo dhe shih!', english: 'Check and see!' },
-          ].map((step, i) => (
+          {sb.steps.map((step, i) => (
             <View key={i} style={styles.step}>
               <Text style={styles.stepNum}>{i + 1}</Text>
               <Text style={styles.stepEmoji}>{step.emoji}</Text>
               <View style={styles.stepText}>
-                <Text style={styles.stepAlb}>{step.albanian}</Text>
-                <Text style={styles.stepEn}>{step.english}</Text>
+                <Text style={styles.stepAlb}>{step.main}</Text>
+                <Text style={styles.stepEn}>{step.hint}</Text>
               </View>
             </View>
           ))}
 
           <Pressable style={styles.btn} onPress={onDismiss}>
-            <Text style={styles.btnText}>Hajde! 🚀</Text>
+            <Text style={styles.btnText}>{sb.letsGo}</Text>
           </Pressable>
         </View>
       </View>
@@ -138,56 +136,20 @@ function makeTrayStyles(colors: ColorPalette) {
   });
 }
 
-// ─── Summary ──────────────────────────────────────────────────────────────────
-
-function Summary({
-  score, total, firstAttemptCount, onReplay, onHome, profileName,
-}: {
-  score: number; total: number; firstAttemptCount: number;
-  onReplay: () => void; onHome: () => void; profileName?: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => makeSumStyles(colors), [colors]);
-  const stars = firstAttemptCount >= total ? 3 : firstAttemptCount >= total * 0.6 ? 2 : 1;
-  return (
-    <View style={styles.wrap}>
-      <SummaryCelebration />
-      <Text style={styles.title}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>
-      <Text style={styles.stars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.score}>{score}/{total} herë saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
-        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
-      </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function makeSumStyles(colors: ColorPalette) {
-  return StyleSheet.create({
-    wrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    title: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, textAlign: 'center', marginBottom: Spacing.md },
-    stars: { fontSize: 48, marginBottom: Spacing.md },
-    score: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
-    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
-  });
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function SentenceBuilder() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
-  const { recordStars } = useProgress();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
+  const didProgressInit = useRef(false);
   const [showInstructions, setShowInstructions] = useState(true);
-  const [sentences, setSentences] = useState<Sentence[]>(() => getRandomSentences(ROUNDS));
+  const [sentences, setSentences] = useState<Sentence[]>(() => getAvailableSentences(0, ROUNDS));
   const [roundIdx, setRoundIdx] = useState(0);
   const [placed, setPlaced] = useState<string[]>([]);
   const [pool, setPool] = useState<string[]>([]);
@@ -214,6 +176,12 @@ export default function SentenceBuilder() {
   }
 
   useEffect(() => {
+    if (didProgressInit.current || !progressLoaded) return;
+    didProgressInit.current = true;
+    setSentences(getAvailableSentences(daysUsed, ROUNDS));
+  }, [progressLoaded]);
+
+  useEffect(() => {
     if (sentence) initRound(sentence);
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -225,7 +193,7 @@ export default function SentenceBuilder() {
   useEffect(() => {
     if (!done) return;
     praise();
-    const stars = firstAttemptCount >= ROUNDS ? 3 : firstAttemptCount >= ROUNDS * 0.6 ? 2 : 1;
+    const stars = (firstAttemptCount >= ROUNDS ? 3 : firstAttemptCount >= ROUNDS * 0.6 ? 2 : 1) as 1 | 2 | 3;
     recordStars('sentence-builder', stars);
   }, [done]);
 
@@ -258,7 +226,7 @@ export default function SentenceBuilder() {
       setScore((s) => s + 1);
       if (isFirstAttempt) setFirstAttemptCount((c) => c + 1);
       speak(sentence.albanian, 0.8);
-      showToast('Saktë! ⭐');
+      showToast(t.games['sentence-builder'].toastCorrect);
       advanceTimer.current = setTimeout(() => {
         if (roundIdx + 1 >= ROUNDS) setDone(true);
         else setRoundIdx((r) => r + 1);
@@ -270,7 +238,7 @@ export default function SentenceBuilder() {
       setShowFail(true);
       failTimer.current = setTimeout(() => setShowFail(false), 1400);
       setIsFirstAttempt(false);
-      showToast('Provo përsëri! 💪');
+      showToast(t.games['sentence-builder'].toastRetry);
       setTimeout(() => {
         setPlaced([]);
         setPool([...sentence.albanian.split(' ')].sort(() => Math.random() - 0.5));
@@ -280,7 +248,7 @@ export default function SentenceBuilder() {
   }, [placed, sentence, roundIdx, isFirstAttempt, colors]);
 
   function handleReplay() {
-    setSentences(getRandomSentences(ROUNDS));
+    setSentences(getAvailableSentences(daysUsed, ROUNDS));
     setRoundIdx(0);
     setScore(0);
     setFirstAttemptCount(0);
@@ -288,15 +256,15 @@ export default function SentenceBuilder() {
   }
 
   if (done) {
+    const stars = (firstAttemptCount >= ROUNDS ? 3 : firstAttemptCount >= ROUNDS * 0.6 ? 2 : 1) as 1 | 2 | 3;
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary
-          score={score}
-          total={ROUNDS}
-          firstAttemptCount={firstAttemptCount}
+        <GameSummary
+          stars={stars}
+          scoreText={`${score}/${ROUNDS} herë saktë!`}
           onReplay={handleReplay}
           onHome={() => router.replace('/home')}
-          profileName={activeProfile?.name}
+          name={activeProfile?.name}
         />
       </SafeAreaView>
     );
@@ -310,7 +278,7 @@ export default function SentenceBuilder() {
 
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
-          <Text style={styles.backText}>← Kthehu</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </Pressable>
         <Pressable onPress={() => setShowInstructions(true)} style={styles.helpBtn} accessibilityLabel="Show instructions">
           <Text style={styles.helpText}>❓</Text>
@@ -329,8 +297,8 @@ export default function SentenceBuilder() {
           <SceneIllustration illustration={sentence.illustration} sentenceId={sentence.albanian} size="large" />
         </View>
 
-        <Text style={styles.instruction}>Bëj fjalinë për foton! 👇</Text>
-        <Text style={styles.instructionEn}>(Make the sentence for the picture!)</Text>
+        <Text style={styles.instruction}>{t.games['sentence-builder'].instruction}</Text>
+        <Text style={styles.instructionEn}>{t.games['sentence-builder'].hint}</Text>
 
         <AnswerTray
           placed={placed}
@@ -353,7 +321,7 @@ export default function SentenceBuilder() {
             accessibilityRole="button"
             accessibilityLabel="Check my answer"
           >
-            <Text style={styles.checkBtnText}>Kontrollo! ✅</Text>
+            <Text style={styles.checkBtnText}>{t.games['sentence-builder'].checkBtn}</Text>
           </Pressable>
         </View>
       </ScrollView>

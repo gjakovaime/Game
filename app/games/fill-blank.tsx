@@ -4,15 +4,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackAnimation } from '../../src/components/FeedbackAnimation';
-import { SummaryCelebration } from '../../src/components/SummaryCelebration';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
-import { buttonGloss } from '../../src/constants/styles';
-import { Sentence, getRandomSentences } from '../../src/data/sentences';
+import { GameSummary } from '../../src/components/GameSummary';
+import { Sentence, getAvailableSentences } from '../../src/data/sentences';
 import { VOCABULARY } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
+import { useT } from '../../src/hooks/useT';
 
 const ROUNDS = 5;
 
@@ -32,8 +32,8 @@ function buildRound(sentence: Sentence): Round {
   return { sentence, blankIdx, choices };
 }
 
-function buildGame(): Round[] {
-  return getRandomSentences(ROUNDS).map(buildRound);
+function buildGame(daysUsed = 0): Round[] {
+  return getAvailableSentences(daysUsed, ROUNDS).map(buildRound);
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -82,38 +82,16 @@ const btnStyle = StyleSheet.create({
   text: { fontSize: FontSizes.lg, fontWeight: '800' },
 });
 
-function Summary({ score, total, onReplay, onHome, name }: {
-  score: number; total: number; onReplay: () => void; onHome: () => void; name?: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const stars = score >= total ? 3 : score >= Math.ceil(total * 0.6) ? 2 : 1;
-  const { recordStars } = useProgress();
-  useEffect(() => { recordStars('fill-blank', stars); }, []);
-
-  return (
-    <View style={styles.summary}>
-      <SummaryCelebration />
-      <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
-      <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
-        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
-      </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 export default function FillBlank() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop, mistake } = useSpeech();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
+  const didProgressInit = useRef(false);
   const [game, setGame] = useState<Round[]>(() => buildGame());
   const [roundIdx, setRoundIdx] = useState(0);
   const [choiceStates, setChoiceStates] = useState<Record<string, 'idle' | 'correct' | 'wrong'>>({});
@@ -134,7 +112,16 @@ export default function FillBlank() {
   }, [roundIdx, game]);
 
   useEffect(() => {
-    if (done) praise();
+    if (didProgressInit.current || !progressLoaded) return;
+    didProgressInit.current = true;
+    setGame(buildGame(daysUsed));
+  }, [progressLoaded]);
+
+  useEffect(() => {
+    if (!done) return;
+    praise();
+    const stars = (score >= ROUNDS ? 3 : score >= Math.ceil(ROUNDS * 0.6) ? 2 : 1) as 1 | 2 | 3;
+    recordStars('fill-blank', stars);
   }, [done]);
 
   useEffect(() => () => stop(), []);
@@ -167,7 +154,7 @@ export default function FillBlank() {
   function handleReplay() {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     if (failTimer.current) clearTimeout(failTimer.current);
-    setGame(buildGame());
+    setGame(buildGame(daysUsed));
     setRoundIdx(0);
     setScore(0);
     setDone(false);
@@ -176,9 +163,10 @@ export default function FillBlank() {
   }
 
   if (done) {
+    const stars = (score >= ROUNDS ? 3 : score >= Math.ceil(ROUNDS * 0.6) ? 2 : 1) as 1 | 2 | 3;
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary score={score} total={ROUNDS} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
+        <GameSummary stars={stars} scoreText={`${score}/${ROUNDS} saktë!`} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
       </SafeAreaView>
     );
   }
@@ -189,7 +177,7 @@ export default function FillBlank() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Kthehu</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </Pressable>
         <Text style={styles.progress}>{roundIdx + 1} / {ROUNDS}</Text>
       </View>
@@ -217,8 +205,8 @@ export default function FillBlank() {
         </Pressable>
       </View>
 
-      <Text style={styles.instruction}>Plotëso fjalinë! 👇</Text>
-      <Text style={styles.instructionEn}>(Fill in the missing word!)</Text>
+      <Text style={styles.instruction}>{t.games['fill-blank'].instruction}</Text>
+      <Text style={styles.instructionEn}>{t.games['fill-blank'].hint}</Text>
 
       <View style={styles.choicesGrid}>
         {choices.map((choice) => (
@@ -266,11 +254,5 @@ function makeStyles(colors: ColorPalette) {
     instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: colors.text, marginTop: Spacing.lg },
     instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginBottom: Spacing.md },
     choicesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg },
-    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
-    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
   });
 }

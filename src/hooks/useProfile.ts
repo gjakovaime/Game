@@ -13,6 +13,7 @@ export type Profile = {
   avatarEmoji: string;
   ageGroup: AgeGroup;
   animationsEnabled: boolean;
+  uiLang: 'en' | 'sq';
 };
 
 export function useProfile() {
@@ -59,7 +60,7 @@ export function useProfile() {
   }, [profiles]);
 
   const createProfile = useCallback(
-    async (name: string, age: number, avatarEmoji: string) => {
+    async (name: string, age: number, avatarEmoji: string, uiLang: 'en' | 'sq' = 'sq') => {
       const profile: Profile = {
         id: Date.now().toString(),
         name: name.trim(),
@@ -67,6 +68,7 @@ export function useProfile() {
         avatarEmoji,
         ageGroup: age <= 6 ? 'young' : 'older',
         animationsEnabled: true,
+        uiLang,
       };
       const updated = [...profiles, profile];
       setProfiles(updated);

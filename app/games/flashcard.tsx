@@ -3,15 +3,15 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SummaryCelebration } from '../../src/components/SummaryCelebration';
+import { GameSummary } from '../../src/components/GameSummary';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
-import { buttonGloss } from '../../src/constants/styles';
 import { VocabItem, getAvailableVocab } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
 import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
+import { useT } from '../../src/hooks/useT';
 
 const ROUNDS = 10;
 
@@ -19,39 +19,15 @@ function buildDeck(vocab: VocabItem[]): VocabItem[] {
   return [...vocab].sort(() => Math.random() - 0.5).slice(0, ROUNDS);
 }
 
-function Summary({ known, total, onReplay, onHome, name }: {
-  known: number; total: number; onReplay: () => void; onHome: () => void; name?: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const stars = known >= total ? 3 : known >= Math.ceil(total * 0.7) ? 2 : 1;
-  const { recordStars } = useProgress();
-  useEffect(() => { recordStars('flashcard', stars); }, []);
-
-  return (
-    <View style={styles.summary}>
-      <SummaryCelebration />
-      <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
-      <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.summaryScore}>{known}/{total} dija!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
-        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
-      </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 export default function Flashcard() {
   const router = useRouter();
   const { activeProfile } = useProfile();
   const { speak, praise, stop } = useSpeech();
-  const { daysUsed, loaded: progressLoaded } = useProgress();
+  const { recordStars, daysUsed, loaded: progressLoaded } = useProgress();
   const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [deck, setDeck] = useState<VocabItem[]>(() => buildDeck(getAvailableVocab(0)));
   const [idx, setIdx] = useState(0);
@@ -73,7 +49,10 @@ export default function Flashcard() {
   const card = deck[idx];
 
   useEffect(() => {
-    if (done) praise();
+    if (!done) return;
+    praise();
+    const stars = (known >= ROUNDS ? 3 : known >= Math.ceil(ROUNDS * 0.7) ? 2 : 1) as 1 | 2 | 3;
+    recordStars('flashcard', stars);
   }, [done]);
 
   useEffect(() => () => stop(), []);
@@ -123,9 +102,10 @@ export default function Flashcard() {
   }
 
   if (done) {
+    const stars = (known >= ROUNDS ? 3 : known >= Math.ceil(ROUNDS * 0.7) ? 2 : 1) as 1 | 2 | 3;
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary known={known} total={ROUNDS} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
+        <GameSummary stars={stars} scoreText={`${known}/${ROUNDS} dija!`} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
       </SafeAreaView>
     );
   }
@@ -137,7 +117,7 @@ export default function Flashcard() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Kthehu</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </Pressable>
         <Text style={styles.progress}>{idx + 1} / {ROUNDS}</Text>
       </View>
@@ -148,19 +128,19 @@ export default function Flashcard() {
         ))}
       </View>
 
-      <Text style={styles.instruction}>Trokite kartën për ta kthyer! 👆</Text>
-      <Text style={styles.instructionEn}>(Tap the card to flip it!)</Text>
+      <Text style={styles.instruction}>{t.games['flashcard'].instruction}</Text>
+      <Text style={styles.instructionEn}>{t.games['flashcard'].hint}</Text>
 
       <Animated.View style={[styles.cardWrap, { transform: [{ translateX: slideAnim }] }]}>
         <Pressable onPress={flipCard}>
           <Animated.View style={[styles.card, styles.cardFront, { transform: [{ rotateY: frontRotate }] }]}>
-            <Text style={styles.cardLabel}>🇦🇱 Shqip</Text>
+            <Text style={styles.cardLabel}>{t.games['flashcard'].frontLabel}</Text>
             <Text style={styles.cardWord}>{card.albanian}</Text>
             <Text style={styles.cardEmoji}>{card.emoji}</Text>
-            <Text style={styles.tapHint}>Trokite për anglisht →</Text>
+            <Text style={styles.tapHint}>{t.games['flashcard'].tapHint}</Text>
           </Animated.View>
           <Animated.View style={[styles.card, styles.cardBack, { transform: [{ rotateY: backRotate }] }]}>
-            <Text style={styles.cardLabel}>🇬🇧 English</Text>
+            <Text style={styles.cardLabel}>{t.games['flashcard'].backLabel}</Text>
             <Text style={styles.cardWordBack}>{card.english}</Text>
             <Text style={styles.cardEmoji}>{card.emoji}</Text>
             <Text style={styles.cardWordSub}>{card.albanian}</Text>
@@ -171,16 +151,16 @@ export default function Flashcard() {
       <View style={styles.actions}>
         <Pressable style={[styles.actionBtn, styles.noBtn]} onPress={() => advance(false)} accessibilityRole="button" accessibilityLabel="Don't know">
           <Text style={styles.actionBtnIcon}>✗</Text>
-          <Text style={styles.actionBtnLabel}>S'di</Text>
+          <Text style={styles.actionBtnLabel}>{t.games['flashcard'].noBtn}</Text>
         </Pressable>
         <View style={styles.actionSpacer} />
         <Pressable style={[styles.actionBtn, styles.yesBtn]} onPress={() => advance(true)} accessibilityRole="button" accessibilityLabel="Know it">
           <Text style={styles.actionBtnIcon}>✓</Text>
-          <Text style={styles.actionBtnLabel}>Di!</Text>
+          <Text style={styles.actionBtnLabel}>{t.games['flashcard'].yesBtn}</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.tally}>{known} ✓  •  {idx - known} ✗  •  {ROUNDS - idx - 1} mbeten</Text>
+      <Text style={styles.tally}>{t.games['flashcard'].tally(known, idx - known, ROUNDS - idx - 1)}</Text>
     </SafeAreaView>
   );
 }
@@ -240,11 +220,5 @@ function makeStyles(colors: ColorPalette) {
     actionBtnIcon: { fontSize: 32, color: colors.textOnPrimary, fontWeight: '900', lineHeight: 36 },
     actionBtnLabel: { fontSize: FontSizes.sm, color: colors.textOnPrimary, fontWeight: '700' },
     tally: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginTop: Spacing.lg },
-    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
-    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
   });
 }

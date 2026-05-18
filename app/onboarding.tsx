@@ -16,9 +16,10 @@ import { ColorPalette, FontSizes, Radii, Spacing } from '../src/constants/colors
 import { buttonGloss } from '../src/constants/styles';
 import { useProfile } from '../src/hooks/useProfile';
 import { useColors } from '../src/hooks/useTheme';
+import { STRINGS } from '../src/i18n/strings';
 
-type Step = 'name' | 'age' | 'avatar';
-const STEPS: Step[] = ['name', 'age', 'avatar'];
+type Step = 'lang' | 'name' | 'age' | 'avatar';
+const STEPS: Step[] = ['lang', 'name', 'age', 'avatar'];
 const AGES = Array.from({ length: 10 }, (_, i) => i + 3);
 
 export default function Onboarding() {
@@ -28,7 +29,9 @@ export default function Onboarding() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [step, setStep] = useState<Step>('name');
+  const [step, setStep] = useState<Step>('lang');
+  const [uiLang, setUiLang] = useState<'en' | 'sq'>('sq');
+  const t = STRINGS[uiLang];
   const [name, setName] = useState('');
   const [age, setAge] = useState(0);
   const [avatar, setAvatar] = useState(AVATARS[0]);
@@ -37,7 +40,8 @@ export default function Onboarding() {
   const stepIndex = STEPS.indexOf(step);
 
   function next() {
-    if (step === 'name') setStep('age');
+    if (step === 'lang') setStep('name');
+    else if (step === 'name') setStep('age');
     else if (step === 'age') setStep('avatar');
     else finish();
   }
@@ -45,11 +49,12 @@ export default function Onboarding() {
   async function finish() {
     if (creating) return;
     setCreating(true);
-    await createProfile(name, age, avatar);
+    await createProfile(name, age, avatar, uiLang);
     router.replace('/home');
   }
 
   const canNext =
+    step === 'lang' ||
     (step === 'name' && name.trim().length >= 1) ||
     (step === 'age' && age > 0) ||
     step === 'avatar';
@@ -60,7 +65,7 @@ export default function Onboarding() {
         <View style={styles.topBar}>
           {canGoBack ? (
             <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
-              <Text style={styles.backText}>← Kthehu</Text>
+              <Text style={styles.backText}>{t.back}</Text>
             </Pressable>
           ) : (
             <View />
@@ -74,17 +79,45 @@ export default function Onboarding() {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {step === 'lang' && (
+            <View style={styles.stepContainer}>
+              <Text style={styles.stepEmoji}>🌍</Text>
+              <Text style={styles.heading}>Language / Gjuha</Text>
+              <Text style={styles.subheadingEn}>Choose your language</Text>
+              <View style={styles.langRow}>
+                <Pressable
+                  style={[styles.langBtn, uiLang === 'sq' && styles.langBtnActive]}
+                  onPress={() => { setUiLang('sq'); setTimeout(next, 250); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Shqip"
+                >
+                  <Text style={styles.langFlag}>🇦🇱</Text>
+                  <Text style={[styles.langText, uiLang === 'sq' && styles.langTextActive]}>Shqip</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.langBtn, uiLang === 'en' && styles.langBtnActive]}
+                  onPress={() => { setUiLang('en'); setTimeout(next, 250); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="English"
+                >
+                  <Text style={styles.langFlag}>🇬🇧</Text>
+                  <Text style={[styles.langText, uiLang === 'en' && styles.langTextActive]}>English</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
           {step === 'name' && (
             <View style={styles.stepContainer}>
-              <Text style={styles.stepEmoji}>👋</Text>
-              <Text style={styles.heading}>Përshëndetje!</Text>
-              <Text style={styles.subheading}>Si të quajnë ty?</Text>
-              <Text style={styles.subheadingEn}>(What is your name?)</Text>
+              <Text style={styles.stepEmoji}>{t.onboarding.nameEmoji}</Text>
+              <Text style={styles.heading}>{t.onboarding.nameTitle}</Text>
+              <Text style={styles.subheading}>{t.onboarding.namePrompt}</Text>
+              <Text style={styles.subheadingEn}>{t.onboarding.nameHint}</Text>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Emri yt..."
+                placeholder={t.onboarding.namePlaceholder}
                 placeholderTextColor={colors.border}
                 maxLength={20}
                 autoFocus
@@ -96,9 +129,9 @@ export default function Onboarding() {
 
           {step === 'age' && (
             <View style={styles.stepContainer}>
-              <Text style={styles.stepEmoji}>🎂</Text>
-              <Text style={styles.heading}>Sa vjeç je, {name}?</Text>
-              <Text style={styles.subheadingEn}>(How old are you?)</Text>
+              <Text style={styles.stepEmoji}>{t.onboarding.ageEmoji}</Text>
+              <Text style={styles.heading}>{t.onboarding.ageTitle(name)}</Text>
+              <Text style={styles.subheadingEn}>{t.onboarding.ageHint}</Text>
               <View style={styles.ageGrid}>
                 {AGES.map((a) => (
                   <Pressable
@@ -118,15 +151,15 @@ export default function Onboarding() {
 
           {step === 'avatar' && (
             <View style={styles.stepContainer}>
-              <Text style={styles.stepEmoji}>🪄</Text>
-              <Text style={styles.heading}>Zgjidh karakterin!</Text>
-              <Text style={styles.subheadingEn}>(Choose your character!)</Text>
+              <Text style={styles.stepEmoji}>{t.onboarding.avatarEmoji}</Text>
+              <Text style={styles.heading}>{t.onboarding.avatarTitle}</Text>
+              <Text style={styles.subheadingEn}>{t.onboarding.avatarHint}</Text>
               <AvatarPicker selected={avatar} onSelect={setAvatar} />
             </View>
           )}
         </ScrollView>
 
-        {step !== 'age' && (
+        {step !== 'age' && step !== 'lang' && (
           <View style={styles.footer}>
             <Pressable
               style={[styles.btn, !canNext && styles.btnDisabled]}
@@ -136,7 +169,7 @@ export default function Onboarding() {
               accessibilityLabel={step === 'avatar' ? 'Start playing' : 'Next'}
             >
               <Text style={styles.btnText}>
-                {step === 'avatar' ? `Nisja, ${name}!` : 'Vazhdo →'}
+                {step === 'avatar' ? t.onboarding.start(name) : t.onboarding.next}
               </Text>
             </Pressable>
           </View>
@@ -206,6 +239,32 @@ function makeStyles(colors: ColorPalette) {
       borderColor: colors.primary,
       textAlign: 'center',
     },
+    langRow: {
+      flexDirection: 'row',
+      gap: Spacing.lg,
+      marginTop: Spacing.lg,
+    },
+    langBtn: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: Spacing.xl,
+      borderRadius: Radii.xl,
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    langBtnActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary,
+    },
+    langFlag: { fontSize: 48, marginBottom: Spacing.sm },
+    langText: { fontSize: FontSizes.lg, fontWeight: '800', color: colors.text },
+    langTextActive: { color: colors.textOnPrimary },
     ageGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',

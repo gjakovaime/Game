@@ -3,15 +3,15 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SummaryCelebration } from '../../src/components/SummaryCelebration';
+import { GameSummary } from '../../src/components/GameSummary';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
-import { buttonGloss } from '../../src/constants/styles';
 import { VocabItem, getAvailableVocab } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useProgress } from '../../src/hooks/useProgress';
 import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
+import { useT } from '../../src/hooks/useT';
 
 const TOTAL = 15;
 
@@ -28,28 +28,6 @@ function buildQueue(items: VocabItem[]): VocabItem[] {
   return [...items].sort(() => Math.random() - 0.5).slice(0, TOTAL);
 }
 
-function Summary({ score, total, onReplay, onHome, name }: {
-  score: number; total: number; onReplay: () => void; onHome: () => void; name?: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const stars = score >= Math.ceil(total * 0.9) ? 3 : score >= Math.ceil(total * 0.6) ? 2 : 1;
-  return (
-    <View style={styles.summary}>
-      <SummaryCelebration />
-      <Text style={styles.summaryTitle}>Bravo{name ? `, ${name}` : ''}! 🎉</Text>
-      <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
-        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
-      </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 export default function CategorySort() {
   const router = useRouter();
   const { activeProfile } = useProfile();
@@ -58,6 +36,7 @@ export default function CategorySort() {
   const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [queue, setQueue] = useState<VocabItem[]>(() => buildQueue(getAvailableVocab(0)));
   const [idx, setIdx] = useState(0);
@@ -128,9 +107,10 @@ export default function CategorySort() {
   }
 
   if (done) {
+    const stars = (score >= Math.ceil(TOTAL * 0.9) ? 3 : score >= Math.ceil(TOTAL * 0.6) ? 2 : 1) as 1 | 2 | 3;
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary score={score} total={TOTAL} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
+        <GameSummary stars={stars} scoreText={`${score}/${TOTAL} saktë!`} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
       </SafeAreaView>
     );
   }
@@ -139,7 +119,7 @@ export default function CategorySort() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Kthehu</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </Pressable>
         <Text style={styles.progress}>{idx + 1} / {TOTAL}</Text>
       </View>
@@ -152,8 +132,8 @@ export default function CategorySort() {
         </Pressable>
       </View>
 
-      <Text style={styles.instruction}>Ku i takon? 👇</Text>
-      <Text style={styles.instructionEn}>(Which category does it belong to?)</Text>
+      <Text style={styles.instruction}>{t.games['category-sort'].instruction}</Text>
+      <Text style={styles.instructionEn}>{t.games['category-sort'].hint}</Text>
 
       <View style={styles.catGrid}>
         {(Object.entries(CAT_META) as [CatId, typeof CAT_META[CatId]][]).map(([catId, meta]) => {
@@ -209,11 +189,5 @@ function makeStyles(colors: ColorPalette) {
     },
     catBtnEmoji: { fontSize: 40 },
     catBtnLabel: { fontSize: FontSizes.md, fontWeight: '800', marginTop: Spacing.sm },
-    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
-    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
   });
 }

@@ -10,9 +10,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SummaryCelebration } from '../../src/components/SummaryCelebration';
+import { GameSummary } from '../../src/components/GameSummary';
 import { ColorPalette, FontSizes, Radii, Spacing } from '../../src/constants/colors';
-import { buttonGloss } from '../../src/constants/styles';
 import { VOCAB_IMAGES } from '../../src/data/vocabImages';
 import { VocabItem, getAvailableVocab, getDistractors, getRandomItems } from '../../src/data/vocabulary';
 import { useProfile } from '../../src/hooks/useProfile';
@@ -20,6 +19,7 @@ import { useProgress } from '../../src/hooks/useProgress';
 import { useWordProgress } from '../../src/hooks/useWordProgress';
 import { useColors } from '../../src/hooks/useTheme';
 import { useSpeech } from '../../src/hooks/useSpeech';
+import { useT } from '../../src/hooks/useT';
 
 const ROUNDS = 5;
 
@@ -89,28 +89,6 @@ const tileStyle = StyleSheet.create({
   image: { width: TILE_SIZE * 0.75, height: TILE_SIZE * 0.75 },
 });
 
-function Summary({ score, total, onReplay, onHome, profileName }: {
-  score: number; total: number; onReplay: () => void; onHome: () => void; profileName?: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const stars = score >= total ? 3 : score >= total * 0.6 ? 2 : 1;
-  return (
-    <View style={styles.summary}>
-      <SummaryCelebration />
-      <Text style={styles.summaryTitle}>Bravo{profileName ? `, ${profileName}` : ''}! 🎉</Text>
-      <Text style={styles.summaryStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
-      <Text style={styles.summaryScore}>{score}/{total} saktë!</Text>
-      <Pressable style={[styles.btn, { backgroundColor: colors.secondary }]} onPress={onReplay}>
-        <Text style={styles.btnText}>Luaj përsëri! 🔄</Text>
-      </Pressable>
-      <Pressable style={[styles.btn, { backgroundColor: colors.primary, marginTop: Spacing.md }]} onPress={onHome}>
-        <Text style={styles.btnText}>Shko në shtëpi 🏠</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 export default function PictureMatch() {
   const router = useRouter();
   const { activeProfile } = useProfile();
@@ -119,6 +97,7 @@ export default function PictureMatch() {
   const { recordWordResult, getSmartItems } = useWordProgress();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [game, setGame] = useState<RoundItem[]>(() => buildGame());
   const [roundIdx, setRoundIdx] = useState(0);
@@ -184,9 +163,10 @@ export default function PictureMatch() {
   }
 
   if (done) {
+    const stars = (score >= ROUNDS ? 3 : score >= ROUNDS * 0.6 ? 2 : 1) as 1 | 2 | 3;
     return (
       <SafeAreaView style={styles.safe}>
-        <Summary score={score} total={ROUNDS} onReplay={handleReplay} onHome={() => router.replace('/home')} profileName={activeProfile?.name} />
+        <GameSummary stars={stars} scoreText={`${score}/${ROUNDS} saktë!`} onReplay={handleReplay} onHome={() => router.replace('/home')} name={activeProfile?.name} />
       </SafeAreaView>
     );
   }
@@ -195,7 +175,7 @@ export default function PictureMatch() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
-          <Text style={styles.backText}>← Kthehu</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </Pressable>
         <Text style={styles.progress}>{roundIdx + 1} / {ROUNDS}</Text>
       </View>
@@ -213,8 +193,8 @@ export default function PictureMatch() {
         </Pressable>
       </View>
 
-      <Text style={styles.instruction}>Gjej foton e saktë! 👇</Text>
-      <Text style={styles.instructionEn}>(Find the correct picture!)</Text>
+      <Text style={styles.instruction}>{t.games['picture-match'].instruction}</Text>
+      <Text style={styles.instructionEn}>{t.games['picture-match'].hint}</Text>
 
       <View style={styles.grid}>
         {round.choices.map((item) => (
@@ -250,11 +230,5 @@ function makeStyles(colors: ColorPalette) {
     instruction: { textAlign: 'center', fontSize: FontSizes.lg, fontWeight: '700', color: colors.text, marginTop: Spacing.lg },
     instructionEn: { textAlign: 'center', fontSize: FontSizes.sm, color: colors.textLight, marginBottom: Spacing.md },
     grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg },
-    summary: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    summaryTitle: { fontSize: FontSizes.xxl, fontWeight: '900', color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-    summaryStars: { fontSize: 48, marginBottom: Spacing.md },
-    summaryScore: { fontSize: FontSizes.xl, fontWeight: '700', color: colors.textLight, marginBottom: Spacing.xxl },
-    btn: { ...buttonGloss, borderRadius: Radii.full, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-    btnText: { color: colors.textOnPrimary, fontSize: FontSizes.lg, fontWeight: '900' },
   });
 }
