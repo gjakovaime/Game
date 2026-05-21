@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.albanianadventures.app"
+      "bundleIdentifier": "com.luajshqip.appname",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.albanianadventures.app"
+      "package": "com.luajshqip.appname"
     },
     "web": {
       "favicon": "./assets/favicon.png",

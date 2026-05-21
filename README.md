@@ -238,6 +238,11 @@ the emoji automatically. No other files need editing.
    ```bash
    docker compose up --build -d
    ```
+4. to submit to app store Build and Submit: Use the command eas build -
+```
+-platform ios --auto-submit or npx testflight
+```
+ to create a production build and automatically upload it to App Store Connect. 
 
 ### Adding a new category
 
